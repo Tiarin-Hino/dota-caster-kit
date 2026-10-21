@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dota Caster Kit</title>
+<link rel="stylesheet" href="/fonts/inter.css">
+<link rel="stylesheet" href="/panel/panel.css">
+</head>
+<body>
+<aside class="side">
+  <div class="brand"><span class="mark">DCK</span><div><b>Dota Caster Kit</b><small id="ver"></small></div></div>
+  <nav id="nav">
+    <a data-tab="live" class="on"><i>●</i>Live</a>
+    <a data-tab="match"><i>⚔</i>Match &amp; teams</a>
+    <a data-tab="replays"><i>▶</i>Replays</a>
+    <a data-tab="design"><i>◐</i>Design</a>
+    <a data-tab="setup"><i>⚙</i>Setup</a>
+    <a data-tab="deck"><i>⌨</i>Hotkeys &amp; Stream Deck</a>
+  </nav>
+  <div class="status" id="status"></div>
+  <div class="foot"><a href="https://github.com/Tiarin-Hino/dota-caster-kit" target="_blank">GitHub</a> · MIT</div>
+</aside>
+
+<main>
+<!-- ============================================================= LIVE -->
+<section data-tab="live" class="on">
+  <header><h1>Live</h1><div class="hint" id="gameLine">Waiting for Dota…</div></header>
+  <div class="grid two">
+    <div class="card">
+      <h2>Scenes <label class="switch right"><input type="checkbox" id="autoScenes"><span></span>Auto</label></h2>
+      <p class="hint">Auto: draft → game → post-game (after the game ends) switch by themselves. Never cuts a replay that is playing.</p>
+      <div class="btns" id="sceneBtns"></div>
+    </div>
+    <div class="card">
+      <h2>Replay</h2>
+      <div class="ready" id="ready">No clip yet</div>
+      <div class="btns">
+        <button class="primary" data-act="capture" title="Save the replay buffer">● Capture</button>
+        <button data-act="show" data-q="last=10">Last 10 s</button>
+        <button data-act="show" data-q="last=20">Last 20 s</button>
+        <button data-act="show" data-q="last=30">Last 30 s</button>
+        <button data-act="show" data-q="last=full">Whole clip</button>
+      </div>
+      <div class="btns">
+        <button data-act="slower">◀◀ Slower</button><button data-act="normal">1×</button><button data-act="faster">Faster ▶▶</button>
+        <button class="warn" data-act="live">⏹ Back to live</button>
+      </div>
+      <label class="switch"><input type="checkbox" id="autoCapture"><span></span>Auto-capture multi-kills and teamfights</label>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Post-game screen <span class="hint" id="matchLine"></span></h2>
+    <div class="seg" id="screens">
+      <button data-screen="board">Scoreboard</button><button data-screen="mvp">MVP</button><button data-screen="player">Player</button>
+      <button data-screen="compare">Head to head</button><button data-screen="graph">Net worth</button><button data-screen="leaders">Leaders</button><button data-screen="off">Hide</button>
+    </div>
+    <div class="row3">
+      <label>Player / left<select id="pl1"></select></label>
+      <label>Right (head to head)<select id="pl2"></select></label>
+      <label>MVP<select id="mvpSel"></select></label>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Preview <span class="seg small right" id="pvSel"><button data-pv="postgame" class="on">Post-game</button><button data-pv="between">Between</button><button data-pv="replay">Replay</button><button data-pv="draft" class="adonly">AD draft</button></span></h2>
+    <div class="preview"><iframe id="pv" src="/overlays/postgame.html"></iframe></div>
+  </div>
+</section>
+
+<!-- ============================================================= MATCH -->
+<section data-tab="match">
+  <header><h1>Match &amp; teams</h1></header>
+  <div class="grid two">
+    <div class="card">
+      <h2>Current series</h2>
+      <div class="series-edit">
+        <label>Team A<select id="mA"></select></label>
+        <button class="ghost" id="swap" title="Swap sides">⇄</button>
+        <label>Team B<select id="mB"></select></label>
+      </div>
+      <div class="row3">
+        <label>Team A plays<select id="aSide"><option value="radiant">Radiant</option><option value="dire">Dire</option></select></label>
+        <label>Best of<select id="bo"><option>1</option><option>2</option><option>3</option><option>5</option></select></label>
+        <label>Round<input id="round" placeholder="e.g. Upper bracket final"></label>
+      </div>
+      <div class="score-big" id="scoreBig"></div>
+      <div class="btns center"><button class="primary" id="winA">Team A won</button><button class="primary" id="winB">Team B won</button><button class="ghost" id="undo">Undo</button><button class="ghost" id="newSeries">New series</button></div>
+      <label class="switch"><input type="checkbox" id="autoResult"><span></span>Count finished games automatically (winning side → its team)</label>
+      <p class="hint">Or press who won. Wrong? Undo. Sides (Radiant/Dire) swap? Change “Team A plays” before the next game – the post-game screens use it to put the right names on each side.</p>
+    </div>
+    <div class="card">
+      <h2>Tournament</h2>
+      <label>Name<input id="tName"></label>
+      <label>Tagline<input id="tTag" placeholder="e.g. Season 3 · Playoffs · Day 2"></label>
+      <label>Between-games text<input id="between" placeholder="Coming soon / Starting in 5 minutes"></label>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Teams <button class="small right" id="addTeam">+ Add team</button></h2>
+    <p class="hint">Team logos: square PNG, exactly 256×256, transparent background. No logo? A coloured badge with the short name is shown.</p>
+    <div class="teams" id="teams"></div>
+  </div>
+</section>
+
+<!-- ============================================================= REPLAYS -->
+<section data-tab="replays">
+  <header><h1>Replays &amp; highlights</h1><button id="archive" class="right">Archive reel now</button></header>
+  <p class="hint">Every file your replay buffer saves shows up here. Clips in the <b>reel</b> loop on the between-games screen. When the next draft starts, the reel is moved to <code>Highlights/&lt;date&gt; &lt;teams&gt;</code> in your replay folder and starts empty.</p>
+  <div class="card"><div class="clips" id="clips"></div></div>
+</section>
+
+<!-- ============================================================= DESIGN -->
+<section data-tab="design">
+  <header><h1>Design</h1></header>
+  <div class="card"><h2>Theme</h2><div class="themes" id="themes"></div></div>
+  <div class="grid two">
+    <div class="card">
+      <h2><span>Images for <span id="thName"></span></span></h2>
+      <p class="hint">Uploads replace the theme's own image and are kept per theme. Sizes are checked – export at exactly this size.</p>
+      <div class="slots" id="slots"></div>
+    </div>
+    <div class="card">
+      <h2>Colours <button class="small right ghost" id="resetVars">Reset</button></h2>
+      <p class="hint">Override the theme's colours with your brand. Applies to all overlays.</p>
+      <div class="vars" id="vars"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================= SETUP -->
+<section data-tab="setup">
+  <header><h1>Setup</h1><div class="hint">Five steps, about 10 minutes. Everything is saved automatically.</div></header>
+  <ol class="steps">
+    <li class="card" id="st-mode"><h2><b>1</b>Game mode</h2>
+      <div class="seg" id="modeSeg"><button data-mode="ap">All Pick / CM / Turbo …</button><button data-mode="ad">Ability Draft</button></div>
+      <p class="hint" id="modeHint"></p>
+      <div class="adonly"><label>AD+ address<input id="adUrl"></label></div>
+    </li>
+    <li class="card" id="st-gsi"><h2><b>2</b>Connect Dota 2 <span class="dot" id="gsiDot"></span></h2>
+      <p>Dota sends live game data to this app through <i>Game State Integration</i>. It needs one small config file in your Dota folder.</p>
+      <div class="btns"><button class="primary" id="gsiInstall">Install automatically</button><a class="btn" href="/api/gsi/cfg">Download file</a></div>
+      <p class="hint">Manual: put the file in <code>…\steamapps\common\dota 2 beta\game\dota\cfg\gamestate_integration\</code> (create the folder). Then add <code>-gamestateintegration</code> to Dota's launch options in Steam and restart Dota. Spectate or watch a replay – the light turns green.</p>
+      <p class="msg" id="gsiMsg"></p>
+    </li>
+    <li class="card" id="st-app"><h2><b>3</b>Streaming app <span class="dot" id="appDot"></span></h2>
+      <div class="seg" id="appSeg"><button data-app="obs">OBS Studio</button><button data-app="streamlabs">Streamlabs Desktop</button><button data-app="none">None / other</button></div>
+      <div class="appcfg" data-for="obs"><p class="hint">OBS: Tools → WebSocket Server Settings → Enable, copy the password.</p>
+        <div class="row3"><label>Host<input id="obsHost"></label><label>Port<input id="obsPort" type="number"></label><label>Password<input id="obsPass" type="password"></label></div></div>
+      <div class="appcfg" data-for="streamlabs"><p class="hint">Streamlabs: Settings → Remote Control → click the QR code area → “Show details”, copy the API token. <b>Experimental</b> – please report issues.</p>
+        <div class="row3"><label>Port<input id="slPort" type="number"></label><label>API token<input id="slToken" type="password"></label></div></div>
+      <div class="appcfg" data-for="none"><p class="hint">Without a connection everything still works – you switch scenes and save replays with your own hotkeys; the overlays react on their own.</p></div>
+      <div class="btns"><button id="saveApp" class="primary">Connect</button></div>
+      <p class="msg" id="appMsg"></p>
+      <div class="scenemap" id="sceneMap"></div>
+    </li>
+    <li class="card" id="st-replay"><h2><b>4</b>Replay buffer</h2>
+      <p>Turn on the replay buffer (OBS: Settings → Output → Replay Buffer; Streamlabs: Settings → Output → Replay Buffer) and set the recording format to <b>MP4</b> – browsers can't play MKV.</p>
+      <label>Folder where replays are saved<input id="rFolder" placeholder="C:\Users\you\Videos"></label>
+      <div class="btns"><button id="askFolder" class="ghost">Ask OBS</button><button id="saveFolder" class="primary">Save</button></div>
+      <p class="msg" id="folderMsg"></p>
+    </li>
+    <li class="card" id="st-sources"><h2><b>5</b>Add the overlays</h2>
+      <p>Add each page as a <b>Browser Source</b>, width <b>1920</b>, height <b>1080</b>, in its own scene. Tick “Control audio via OBS” if you want clip sound (and add <code>?sound=1</code>).</p>
+      <div class="urls" id="urls"></div>
+    </li>
+  </ol>
+</section>
+
+<!-- ============================================================= DECK -->
+<section data-tab="deck">
+  <header><h1>Hotkeys &amp; Stream Deck</h1></header>
+  <p class="hint">Every button in this panel is also a URL. Use them from a Stream Deck (“Website” action with “GET request in background”, or Bitfocus Companion's HTTP GET), AutoHotkey, Touch Portal, or a terminal (<code>curl</code>).</p>
+  <div class="card"><div class="urls" id="actions"></div></div>
+  <div class="card"><h2>Log</h2><pre class="log" id="log"></pre></div>
+</section>
+</main>
+<div class="toast" id="toast"></div>
+<script src="/panel/panel.js"></script>
+</body></html>

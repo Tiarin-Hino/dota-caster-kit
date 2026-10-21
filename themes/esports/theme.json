@@ -1,0 +1,30 @@
+{
+  "name": "Neon Arena",
+  "description": "Dark esports look with neon accents and cut corners.",
+  "author": "Dota Caster Kit",
+  "order": 1,
+  "fonts": ["/fonts/rajdhani.css", "/fonts/inter.css"],
+  "vars": {
+    "bg": "radial-gradient(1200px 700px at 15% 10%, #1b2a5a 0%, transparent 60%), radial-gradient(1000px 700px at 90% 100%, #46104a 0%, transparent 60%), #070a14",
+    "bg-overlay": "rgba(5,8,18,.55)",
+    "panel": "rgba(12,18,36,.88)",
+    "panel-2": "rgba(45,226,230,.06)",
+    "line": "rgba(120,180,255,.18)",
+    "text": "#eef3ff",
+    "muted": "#8a97b8",
+    "accent": "#2de2e6",
+    "accent-2": "#ff3d81",
+    "accent-text": "#04121a",
+    "radiant": "#38e07b",
+    "dire": "#ff5a4e",
+    "win": "#ffd23f",
+    "font-head": "'Rajdhani', sans-serif",
+    "font-body": "'Inter', sans-serif",
+    "head-case": "uppercase",
+    "head-spacing": ".05em",
+    "head-weight": "700",
+    "radius": "4px",
+    "shadow": "0 0 0 1px rgba(45,226,230,.08), 0 18px 50px rgba(0,0,0,.55)"
+  },
+  "assets": {}
+}

@@ -1,0 +1,32 @@
+{
+  "name": "Pixel Quest",
+  "description": "Retro 8-bit style: chunky borders, hard shadows, arcade fonts.",
+  "author": "Dota Caster Kit",
+  "order": 2,
+  "fonts": ["/fonts/press-start-2p.css", "/fonts/vt323.css"],
+  "vars": {
+    "bg": "#1a1433",
+    "bg-overlay": "rgba(26,20,51,.45)",
+    "panel": "#2b2352",
+    "panel-2": "#3a3070",
+    "line": "#4d4290",
+    "text": "#fff7e0",
+    "muted": "#a99fd6",
+    "accent": "#ffcc00",
+    "accent-2": "#ff4d6d",
+    "accent-text": "#1a1433",
+    "radiant": "#3ddc84",
+    "dire": "#ff6b3d",
+    "win": "#ffcc00",
+    "font-head": "'Press Start 2P', monospace",
+    "font-body": "'VT323', monospace",
+    "font-num": "'VT323', monospace",
+    "head-case": "uppercase",
+    "head-spacing": "0",
+    "head-weight": "400",
+    "radius": "0px",
+    "border": "4px solid #0d0a1f",
+    "shadow": "6px 6px 0 #0d0a1f"
+  },
+  "assets": {}
+}

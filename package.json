@@ -1,0 +1,11 @@
+{
+  "name": "dota-caster-kit",
+  "version": "0.1.0",
+  "description": "Free broadcast toolkit for amateur Dota 2 tournaments: post-game screens, replays and between-games highlights from Dota GSI. Works with OBS Studio and Streamlabs.",
+  "license": "MIT",
+  "main": "app/server.js",
+  "scripts": { "start": "node app/server.js", "demo": "node tools/fake-gsi.js" },
+  "engines": { "node": ">=18" },
+  "repository": { "type": "git", "url": "https://github.com/Tiarin-Hino/dota-caster-kit" },
+  "keywords": ["dota2", "gsi", "obs", "streamlabs", "overlay", "esports", "caster"]
+}

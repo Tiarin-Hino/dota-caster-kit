@@ -1,0 +1,6 @@
+/* Neon Arena – cut corners and a neon edge on panels */
+.panel { clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px)); position: relative; }
+.panel::after { content: ""; position: absolute; left: 0; top: 0; width: 120px; height: 3px; background: linear-gradient(90deg, var(--accent), transparent); }
+.pill { border-radius: 2px; clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); padding: 6px 20px; }
+.head { text-shadow: 0 0 18px rgba(45,226,230,.12); }
+.backdrop { background-image: linear-gradient(rgba(45,226,230,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(45,226,230,.035) 1px, transparent 1px), var(--bg); background-size: 48px 48px, 48px 48px, auto; }

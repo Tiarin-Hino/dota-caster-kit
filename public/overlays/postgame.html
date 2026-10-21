@@ -1,0 +1,208 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Post-game – Dota Caster Kit</title>
+<link rel="stylesheet" href="/shared/base.css">
+<style>
+.stage { padding: 44px 64px; gap: 22px; }
+.topbar .result { text-align: right; }
+.topbar .result .w { font-size: 34px; }
+.screen { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 22px; }
+
+/* --- scoreboard --- */
+.tbl { padding: 12px 18px 14px; }
+.tbl .th { display: flex; align-items: center; gap: 14px; height: 52px; padding: 0 6px; }
+.tbl .th .n { font-size: 28px; }
+.tbl .th .grow { flex: 1; }
+.tbl .th .k { font-size: 32px; }
+.row, .hdr { display: grid; grid-template-columns: 112px 1fr 56px 150px 120px 100px 130px 100px 340px var(--adcol, 0px); align-items: center; column-gap: 14px; }
+.hdr { font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; padding: 0 6px 4px; }
+.row { height: 66px; padding: 0 6px; border-top: var(--border); }
+.row .portrait { width: 112px; height: 63px; object-fit: cover; border-radius: calc(var(--radius) * .5); }
+.row .pn { font-size: 25px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .hn { font-size: 16px; color: var(--muted); }
+.row .c { text-align: center; font-size: 23px; }
+.row .c small { color: var(--muted); font-size: 17px; }
+.items { display: flex; gap: 4px; align-items: center; }
+.items img, .items .noimg { width: 44px; height: 32px; border-radius: 4px; object-fit: cover; }
+.items .neutral { width: 34px; height: 34px; border-radius: 50%; margin-left: 6px; }
+.abil { display: flex; gap: 5px; }
+.abil img, .abil .noimg { width: 40px; height: 40px; border-radius: 6px; }
+.abil .noimg { border: 2px dashed var(--line); background: none; }
+.mvp-star { color: var(--win); margin-left: 8px; }
+.won .th .pill { display: inline-block; } .th .pill { display: none; }
+
+/* --- spotlight (MVP / player) --- */
+.spot { flex: 1; display: grid; grid-template-columns: 760px 1fr; gap: 40px; align-items: stretch; }
+.spot .art { position: relative; overflow: hidden; }
+.spot .art img.render { position: absolute; left: 50%; bottom: 0; height: 104%; transform: translateX(-50%); filter: drop-shadow(0 20px 40px rgba(0,0,0,.6)); }
+.spot .art img.flat { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .35; filter: blur(6px); }
+.spot .info { display: flex; flex-direction: column; gap: 22px; padding: 40px 44px; }
+.spot .who { font-size: 88px; line-height: .95; }
+.spot .heroline { font-size: 30px; color: var(--muted); }
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.tile { padding: 18px 22px; background: var(--panel-2); border: var(--border); border-radius: var(--radius); }
+.tile .l { font-size: 17px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.tile .v { font-size: 46px; margin-top: 4px; }
+.spot .items img, .spot .items .noimg { width: 88px; height: 64px; border-radius: 6px; }
+.spot .items .neutral { width: 64px; height: 64px; }
+.spot .abil img, .spot .abil .noimg { width: 76px; height: 76px; border-radius: 10px; }
+.label-s { font-size: 18px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 8px; }
+
+/* --- compare --- */
+.cmp { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 30px 40px; }
+.cmp .ph { display: flex; align-items: center; gap: 22px; padding-bottom: 20px; }
+.cmp .ph.r { flex-direction: row-reverse; text-align: right; }
+.cmp .ph img { width: 210px; height: 118px; object-fit: cover; border-radius: var(--radius); }
+.cmp .ph .who { font-size: 46px; }
+.cmp .rows { grid-column: 1 / 3; display: flex; flex-direction: column; gap: 12px; }
+.cmp .cr { display: grid; grid-template-columns: 1fr 220px 1fr; align-items: center; gap: 22px; }
+.cmp .cr .lab { text-align: center; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-size: 18px; }
+.cmp .bar { height: 46px; position: relative; display: flex; align-items: center; }
+.cmp .bar i { position: absolute; top: 6px; bottom: 6px; border-radius: 4px; background: var(--c); opacity: .85; }
+.cmp .bar.l i { right: 0; } .cmp .bar.r i { left: 0; }
+.cmp .bar b { position: relative; font-size: 28px; padding: 0 14px; }
+.cmp .bar.l { justify-content: flex-start; }
+.cmp .bar.r { justify-content: flex-end; }
+.cmp .best b { color: var(--win); }
+
+/* --- graph --- */
+.graph { flex: 1; padding: 26px 34px; display: flex; flex-direction: column; gap: 10px; }
+.graph svg { flex: 1; width: 100%; }
+.graph .legend { display: flex; gap: 30px; font-size: 20px; }
+.graph .legend i { display: inline-block; width: 18px; height: 18px; border-radius: 4px; margin-right: 8px; vertical-align: -2px; }
+
+/* --- leaders --- */
+.leaders { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr 1fr; gap: 22px; }
+.lead { padding: 22px 26px; display: flex; flex-direction: column; gap: 10px; }
+.lead .lt { font-size: 26px; }
+.lead .lr { display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: center; font-size: 25px; padding: 6px 0; border-top: var(--border); }
+.lead .lr:first-of-type .v { color: var(--win); }
+.lead .lr .i { color: var(--muted); }
+.empty { flex: 1; display: grid; place-items: center; font-size: 34px; color: var(--muted); }
+</style></head>
+<body>
+<div class="backdrop"></div>
+<div class="stage" id="root"></div>
+<script src="/shared/kit.js"></script>
+<script>
+// Post-game screens: board · mvp · player · compare · graph · leaders. The control panel picks the screen.
+// Test without the panel: postgame.html?screen=mvp
+const { esc, img, hero, heroRender, item, ability, k, num, clock, teamLogo } = KIT;
+const root = document.getElementById("root");
+let st = null, match = null, lastKey = "", leaders = null;
+
+KIT.on("state", async s => {
+  st = s;
+  const d = s.display, screen = KIT.qs.get("screen") || d.screen;
+  const key = JSON.stringify([screen, d.rev, d.matchId, s.mode, s.match.teamA, s.match.teamB, s.match.score, KIT.assets, s.tournament, s.teams]);
+  if (key === lastKey) return; lastKey = key;
+  if (screen === "off") { document.body.style.opacity = 0; return; }
+  document.body.style.opacity = 1;
+  match = await KIT.get(`/api/match?id=${encodeURIComponent(d.matchId || "latest")}`);
+  if (screen === "leaders") leaders = await KIT.get("/api/leaders");
+  render(screen);
+});
+
+// team on a side of the shown game: saved with the match (so old games keep their names), refreshed from the team list
+const teamOf = side => { const saved = match && match.teams && match.teams[side]; const t = saved ? st.teams.find(x => x.id === saved.id) || saved : KIT.sideTeam(st, side);
+  return t || { name: side === "radiant" ? "Radiant" : "Dire" }; };
+const pkey = p => p.team[0] + p.slot;
+const findP = key => match.players.find(p => pkey(p) === key || String(p.accountId) === String(key));
+const mvpPlayer = () => (st.display.mvp && findP(st.display.mvp)) || match.players.find(p => p.name === match.mvp) || [...match.players].sort((a, b) => (b.mvpScore || 0) - (a.mvpScore || 0))[0];
+
+function topbar(subtitle) {
+  const t = st.tournament, a = st.match.teamA, b = st.match.teamB, sc = st.match.score;
+  const win = match && match.winTeam ? teamOf(match.winTeam) : null;
+  return `<div class="topbar panel fade-in">
+    ${KIT.logo()}
+    <div><div class="tname head">${esc(t.name)}</div><div class="sub">${esc([st.match.round, subtitle].filter(Boolean).join(" · "))}</div></div>
+    <div class="grow"></div>
+    <div class="series"><div class="team">${teamLogo(a)}<span class="head">${esc(a && a.name)}</span></div>
+      <div class="score head num">${sc.a} – ${sc.b}</div><div class="team"><span class="head">${esc(b && b.name)}</span>${teamLogo(b)}</div></div>
+    ${win ? `<div class="result"><div class="w head">${esc(win.name)} win</div><div class="sub num">${clock(match.duration)} · ${match.score.radiant ?? "–"} : ${match.score.dire ?? "–"}</div></div>` : ""}
+  </div>`;
+}
+const itemsHtml = p => `<div class="items">${p.items.map(i => i ? img(item(i)) : `<span class="noimg"></span>`).join("")}${p.neutral ? img(item(p.neutral), "neutral") : ""}</div>`;
+const abilHtml = p => st.mode !== "ad" ? "" : `<div class="abil">${(p.drafted || [null, null, null, null]).map(a => a ? `<img src="${ability(a.name)}" title="${esc(a.displayName)}" onerror="this.outerHTML='<span class=noimg></span>'">` : `<span class="noimg"></span>`).join("")}</div>`;
+
+function render(screen) {
+  if (!match || !match.players) { root.innerHTML = topbarSafe() + `<div class="empty head">Waiting for the first game to finish…</div>`; return; }
+  const fn = { board, mvp: () => spotlight(mvpPlayer(), "MVP"), player: () => spotlight(findP(st.display.player) || mvpPlayer(), "Player spotlight"),
+               compare, graph, leaders: leadersScreen }[screen] || board;
+  root.innerHTML = fn();
+}
+function topbarSafe() { try { return topbar(""); } catch { return ""; } }
+
+function board() {
+  const mvp = mvpPlayer();
+  document.documentElement.style.setProperty("--adcol", st.mode === "ad" ? "190px" : "0px");
+  const team = side => {
+    const t = teamOf(side), ps = match.players.filter(p => p.team === side);
+    const kills = ps.reduce((a, p) => a + (p.kills || 0), 0);
+    return `<div class="tbl panel side-bar ${side === "radiant" ? "rad" : "dir"} ${match.winTeam === side ? "won" : ""} fade-in">
+      <div class="th">${teamLogo(t)}<span class="n head">${esc(t.name)}</span><span class="pill winner-tag">Victory</span><span class="grow"></span><span class="muted">${side}</span><span class="k head num">${kills}</span></div>
+      <div class="hdr"><span></span><span>Player</span><span style="text-align:center">Lvl</span><span style="text-align:center">K / D / A</span><span style="text-align:center">LH / DN</span><span style="text-align:center">Net</span><span style="text-align:center">GPM / XPM</span><span style="text-align:center">Dmg</span><span>Items</span>${st.mode === "ad" ? "<span>Drafted</span>" : ""}</div>
+      ${ps.map(p => `<div class="row">${img(hero(p.hero), "portrait")}
+        <div><div class="pn">${esc(p.name || "?")}${p === mvp ? `<span class="mvp-star">★ MVP</span>` : ""}</div><div class="hn">${esc(p.heroName)}</div></div>
+        <div class="c num">${p.level ?? "–"}</div><div class="c num">${p.kills ?? 0} / ${p.deaths ?? 0} / ${p.assists ?? 0}</div>
+        <div class="c num">${p.lastHits ?? 0} <small>/ ${p.denies ?? 0}</small></div><div class="c num accent">${k(p.netWorth)}</div>
+        <div class="c num">${p.gpm ?? "–"} <small>/ ${p.xpm ?? "–"}</small></div><div class="c num">${k(p.heroDamage)}</div>
+        ${itemsHtml(p)}${abilHtml(p)}</div>`).join("")}</div>`;
+  };
+  return topbar("Post-game") + `<div class="screen">${team("radiant")}${team("dire")}</div>`;
+}
+
+function spotlight(p, label) {
+  if (!p) return board();
+  const t = teamOf(p.team);
+  const tiles = [["K / D / A", `${p.kills ?? 0}/${p.deaths ?? 0}/${p.assists ?? 0}`], ["Net worth", k(p.netWorth)], ["GPM / XPM", `${p.gpm ?? "–"}/${p.xpm ?? "–"}`],
+    ["Hero damage", k(p.heroDamage)], ["Last hits", num(p.lastHits)], p.heroHealing > 500 ? ["Healing", k(p.heroHealing)] : p.wardsPlaced ? ["Wards placed", p.wardsPlaced] : ["Tower damage", k(p.towerDamage)]];
+  return topbar(label) + `<div class="spot fade-in">
+    <div class="art panel ${p.team === "radiant" ? "rad" : "dir"} side-bar">${img(hero(p.hero), "flat")}<img class="render" src="${heroRender(p.hero)}" onerror="this.src='${hero(p.hero)}';this.style.height='auto';this.style.width='100%';this.style.bottom='30%'"></div>
+    <div class="info panel">
+      <div><span class="pill ${label === "MVP" ? "winner-tag" : ""}">${esc(label)}</span></div>
+      <div><div class="who head">${esc(p.name || "?")}</div><div class="heroline">${esc(p.heroName)} · ${esc(t.name)}</div></div>
+      <div class="tiles">${tiles.map(([l, v]) => `<div class="tile"><div class="l">${l}</div><div class="v head num">${v}</div></div>`).join("")}</div>
+      <div><div class="label-s">Items</div>${itemsHtml(p)}</div>
+      ${st.mode === "ad" ? `<div><div class="label-s">Drafted abilities</div>${abilHtml(p)}</div>` : ""}
+    </div></div>`;
+}
+
+function compare() {
+  const a = findP(st.display.player) || match.players.filter(p => p.team === "radiant").sort((x, y) => (y.netWorth || 0) - (x.netWorth || 0))[0];
+  const b = findP(st.display.player2) || match.players.filter(p => p.team === "dire").sort((x, y) => (y.netWorth || 0) - (x.netWorth || 0))[0];
+  const rows = [["Kills", "kills"], ["Deaths", "deaths", true], ["Assists", "assists"], ["Net worth", "netWorth"], ["GPM", "gpm"], ["XPM", "xpm"], ["Last hits", "lastHits"], ["Hero damage", "heroDamage"], ["Tower damage", "towerDamage"]];
+  const ph = (p, r) => `<div class="ph ${r ? "r" : ""}">${img(hero(p.hero))}<div><div class="who head">${esc(p.name)}</div><div class="muted">${esc(p.heroName)} · ${esc(teamOf(p.team).name)}</div></div></div>`;
+  return topbar("Head to head") + `<div class="cmp panel fade-in">${ph(a)}${ph(b, true)}<div class="rows">${rows.map(([l, key, low]) => {
+    const x = a[key] || 0, y = b[key] || 0, m = Math.max(1, x, y), bx = low ? x < y : x > y, by = low ? y < x : y > x;
+    return `<div class="cr"><div class="bar l ${bx ? "best" : ""}" style="--c:var(--${a.team})"><i style="width:${(x / m) * 100}%"></i><b class="num">${k(x)}</b></div>
+      <div class="lab">${l}</div><div class="bar r ${by ? "best" : ""}" style="--c:var(--${b.team})"><i style="width:${(y / m) * 100}%"></i><b class="num">${k(y)}</b></div></div>`; }).join("")}</div></div>`;
+}
+
+function graph() {
+  const tl = (match.timeline || []).filter(x => x.t >= 0);
+  if (tl.length < 2) return topbar("Net worth") + `<div class="empty head">Not enough data for a graph</div>`;
+  const W = 1740, H = 640, pad = 60, maxT = tl[tl.length - 1].t, adv = tl.map(x => x.radiantNw - x.direNw), M = Math.max(2000, ...adv.map(Math.abs));
+  const X = t => pad + (t / maxT) * (W - pad * 2), Y = v => H / 2 - (v / M) * (H / 2 - 30);
+  const pts = tl.map((x, i) => `${X(x.t).toFixed(1)},${Y(adv[i]).toFixed(1)}`).join(" ");
+  const area = `${X(tl[0].t)},${H / 2} ${pts} ${X(maxT)},${H / 2}`;
+  let ticks = ""; for (let m = 0; m <= maxT / 60; m += 10) ticks += `<line x1="${X(m * 60)}" x2="${X(m * 60)}" y1="20" y2="${H - 20}" stroke="var(--line)"/><text x="${X(m * 60)}" y="${H - 2}" fill="var(--muted)" font-size="18" text-anchor="middle">${m}:00</text>`;
+  const r = teamOf("radiant"), d = teamOf("dire");
+  return topbar("Net worth advantage") + `<div class="graph panel fade-in">
+    <div class="legend"><span><i style="background:var(--radiant)"></i>${esc(r.name)} ahead</span><span><i style="background:var(--dire)"></i>${esc(d.name)} ahead</span><span class="muted">max ${k(Math.max(...adv))} / ${k(-Math.min(...adv))}</span></div>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+      <defs><clipPath id="up"><rect x="0" y="0" width="${W}" height="${H / 2}"/></clipPath><clipPath id="dn"><rect x="0" y="${H / 2}" width="${W}" height="${H / 2}"/></clipPath></defs>
+      ${ticks}<line x1="${pad}" x2="${W - pad}" y1="${H / 2}" y2="${H / 2}" stroke="var(--muted)" stroke-width="2"/>
+      <polygon points="${area}" fill="var(--radiant)" opacity=".35" clip-path="url(#up)"/><polygon points="${area}" fill="var(--dire)" opacity=".35" clip-path="url(#dn)"/>
+      <polyline points="${pts}" fill="none" stroke="var(--text)" stroke-width="4" stroke-linejoin="round"/>
+    </svg></div>`;
+}
+
+function leadersScreen() {
+  const ps = (leaders && leaders.players) || [];
+  const cats = [["Most kills", p => p.kills], ["Best KDA", p => p.kda], ["Highest avg GPM", p => p.avgGpm], ["Hero damage", p => p.heroDamage, k], ["Wards placed", p => p.wardsPlaced], ["Camps stacked", p => p.campsStacked]];
+  return topbar(`Tournament leaders · ${leaders ? leaders.games : 0} game(s)`) + `<div class="leaders fade-in">${cats.map(([t, f, fmt]) => {
+    const top = [...ps].sort((a, b) => (f(b) || 0) - (f(a) || 0)).slice(0, 5);
+    return `<div class="lead panel"><div class="lt head">${t}</div>${top.map((p, i) => `<div class="lr"><span class="i num">${i + 1}</span><span>${esc(p.name)}</span><span class="v head num">${(fmt || String)(f(p) || 0)}</span></div>`).join("")}</div>`; }).join("")}</div>`;
+}
+</script>
+</body></html>

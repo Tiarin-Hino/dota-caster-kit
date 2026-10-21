@@ -1,0 +1,46 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Replay – Dota Caster Kit</title>
+<link rel="stylesheet" href="/shared/base.css">
+<style>
+body { background: #000; transition: opacity .25s; }
+video { position: absolute; inset: 0; width: 1920px; height: 1080px; object-fit: contain; background: #000; }
+.bug { position: absolute; left: 48px; top: 40px; display: flex; align-items: stretch; gap: 0; }
+.bug .tag { padding: 12px 22px; background: var(--accent); color: var(--accent-text); font-size: 30px; display: flex; align-items: center; gap: 12px; border-radius: var(--radius) 0 0 var(--radius); }
+.bug .tag::before { content: ""; width: 0; height: 0; border-left: 16px solid currentColor; border-top: 10px solid transparent; border-bottom: 10px solid transparent; }
+.bug .lab { padding: 12px 22px; background: var(--panel); font-size: 28px; display: flex; align-items: center; border-radius: 0 var(--radius) var(--radius) 0; border: var(--border); border-left: 0; }
+.bug .lab:empty { display: none; } .bug .lab:empty + * {} .bug:has(.lab:empty) .tag { border-radius: var(--radius); }
+.speed { margin-left: 14px; padding: 12px 18px; background: var(--accent-2); color: #fff; font-size: 26px; border-radius: var(--radius); align-self: center; }
+.logo-c { position: absolute; right: 48px; top: 40px; } .logo-c .logo { height: 80px; max-width: 260px; object-fit: contain; }
+.err { position: absolute; inset: 0; display: grid; place-items: center; font-size: 34px; color: var(--muted); text-align: center; padding: 200px; }
+</style></head>
+<body style="opacity:0">
+<video id="v" muted playsinline preload="auto"></video>
+<div class="bug"><span class="tag head">Replay</span><span class="lab head" id="lab"></span><span class="speed head hidden" id="spd"></span></div>
+<div class="logo-c" id="logo"></div>
+<div class="err hidden" id="err"></div>
+<script src="/shared/kit.js"></script>
+<script>
+// Plays the clip chosen in the panel (or by a Stream Deck action). ?sound=1 keeps the clip's audio.
+const v = document.getElementById("v"), lab = document.getElementById("lab"), spd = document.getElementById("spd"), err = document.getElementById("err");
+if (KIT.qs.get("sound") === "1") v.muted = false;
+let started = -1, playing = false;
+KIT.on("state", st => {
+  const r = st.replay;
+  document.getElementById("logo").innerHTML = KIT.logo();
+  if (!r.playing || !r.clip) { if (playing) { playing = false; document.body.style.opacity = 0; setTimeout(() => !playing && v.pause(), 300); } return; }
+  spd.textContent = r.speed + "×"; spd.classList.toggle("hidden", r.speed === 1);
+  lab.textContent = r.clip.label || "";
+  err.classList.toggle("hidden", r.clip.playable);
+  if (!r.clip.playable) err.textContent = "This replay is an MKV file – browsers can't play it. Set your replay/recording format to MP4 (see docs/SETUP.md).";
+  if (r.start !== started) {            // new playback: load, seek to "last N seconds", play
+    started = r.start;
+    v.src = r.clip.url + "?s=" + r.start;
+    v.onloadedmetadata = () => { if (r.fromEnd && isFinite(v.duration)) v.currentTime = Math.max(0, v.duration - r.fromEnd / 1000); v.playbackRate = KIT.state.replay.speed; v.play().catch(() => {}); };
+  }
+  v.playbackRate = r.speed;
+  playing = true; document.body.style.opacity = 1;
+});
+v.addEventListener("ended", () => { if (playing) KIT.post("/api/replay/ended"); });
+v.addEventListener("error", () => { err.textContent = "Could not play this clip (" + (v.error && v.error.message || "unsupported format") + ")"; err.classList.remove("hidden"); });
+</script>
+</body></html>

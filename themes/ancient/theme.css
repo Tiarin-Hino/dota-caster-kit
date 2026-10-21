@@ -1,0 +1,9 @@
+/* Ancient Relic – gold rules and ornament marks */
+.panel { position: relative; }
+.panel::before { content: "◆"; position: absolute; top: -11px; left: 50%; transform: translateX(-50%); color: var(--accent); font-size: 16px; text-shadow: 0 0 8px rgba(0,0,0,.8); }
+.cards .panel::before, .tile::before { display: none; }
+.pill { border-radius: 2px; background: linear-gradient(180deg, #e7c46e, #b68a32); border: 1px solid #f6dc95; }
+.winner-tag { background: linear-gradient(180deg, #f6dc95, #d4a84a); }
+.head { text-shadow: 0 2px 0 rgba(0,0,0,.5); }
+.backdrop { background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.012) 0 2px, transparent 2px 8px), var(--bg); }
+.tlogo-text { border-radius: 50%; border: 2px solid var(--accent); }

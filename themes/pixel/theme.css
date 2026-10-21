@@ -1,0 +1,20 @@
+/* Pixel Quest – the arcade fonts render small/large, so sizes are tuned here */
+body { font-size: 28px; }
+.head { font-size: .62em; line-height: 1.5; }
+.title-xl.head, .spot .who.head { font-size: 48px; }
+.topbar .tname { font-size: 26px; }
+.row .pn, .card .nm, .tile .v, .cmp .bar b, .lead .lr { font-size: 32px; }
+.row .c { font-size: 30px; }
+.hdr, .tile .l, .label-s { font-size: 20px; }
+.pill { border-radius: 0; box-shadow: 3px 3px 0 #0d0a1f; font-size: 14px; padding: 8px 12px; }
+.tlogo-text { border-radius: 0; font-size: 12px; }
+img, .items img { image-rendering: pixelated; border-radius: 0 !important; }
+.backdrop { background-image: linear-gradient(#ffffff08 2px, transparent 2px), linear-gradient(90deg, #ffffff08 2px, transparent 2px); background-size: 32px 32px; background-color: var(--bg); }
+.side-bar { border-left-width: 10px; border-left-color: var(--side); }
+.big.head { font-size: 40px; }
+.vs .t .n.head { font-size: 30px; }
+.vs .t .s.head { font-size: 56px; }
+.topbar .sub, .row .hn, .top .tg, .heroline, .muted { font-size: 26px; }
+.topbar .tname.head { font-size: 22px; }
+.vs .t .n.head { font-size: 24px; }
+.series .score.num, .vs .t .s.num, .th .k.num { font-family: var(--font-head); font-size: 30px; }

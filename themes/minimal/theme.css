@@ -1,0 +1,4 @@
+/* Clean Light – nothing fancy on purpose */
+.winner-tag { color: #fff; }
+.side-bar { border-left-width: 5px; }
+.frame video { border-radius: var(--radius); }

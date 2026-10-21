@@ -1,0 +1,70 @@
+/* Base layout for all overlays. Themes change the look through the CSS variables below (theme.json "vars")
+   and optional extra rules (theme.css). Keep layout here, keep looks in themes. */
+:root {
+  --bg: #0b0f17;                 /* page background when no background image is uploaded */
+  --bg-overlay: rgba(0,0,0,.35); /* darkens an uploaded background so text stays readable */
+  --panel: rgba(16,22,34,.92);
+  --panel-2: rgba(255,255,255,.04);
+  --line: rgba(255,255,255,.12);
+  --text: #eef2f8;
+  --muted: #8d99ad;
+  --accent: #36c5f0;
+  --accent-2: #f0447a;
+  --accent-text: #061018;
+  --radiant: #5ad16a;
+  --dire: #e0554a;
+  --win: #ffd166;
+  --font-head: "Segoe UI", system-ui, sans-serif;
+  --font-body: "Segoe UI", system-ui, sans-serif;
+  --font-num: var(--font-body);
+  --head-case: uppercase;
+  --head-spacing: .06em;
+  --head-weight: 700;
+  --radius: 10px;
+  --border: 1px solid var(--line);
+  --shadow: 0 10px 40px rgba(0,0,0,.45);
+  --stage-scale: 1;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+body { transform: scale(var(--stage-scale)); transform-origin: 0 0; color: var(--text); font-family: var(--font-body); font-size: 22px; }
+img { display: block; }
+.noimg { display: block; background: var(--panel-2); }
+
+/* full-screen backdrop: uploaded background > theme background */
+.backdrop { position: absolute; inset: 0; background: var(--bg); }
+.backdrop::before { content: ""; position: absolute; inset: 0; background-image: var(--img-background); background-size: cover; background-position: center; }
+.backdrop::after { content: ""; position: absolute; inset: 0; background: var(--bg-overlay); }
+.has-bg-none .backdrop::after { display: none; }
+
+.stage { position: absolute; inset: 0; padding: 56px 72px; display: flex; flex-direction: column; gap: 28px; }
+.panel { background: var(--img-texture) center / 512px repeat, var(--panel); background-blend-mode: soft-light, normal; border: var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+.head { font-family: var(--font-head); text-transform: var(--head-case); letter-spacing: var(--head-spacing); font-weight: var(--head-weight); }
+.muted { color: var(--muted); }
+.accent { color: var(--accent); }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+/* header bar used by post-game / between screens */
+.topbar { display: flex; align-items: center; gap: 28px; height: 110px; padding: 0 32px; }
+.topbar .logo { height: 86px; max-width: 300px; object-fit: contain; }
+.topbar .tname { font-size: 34px; }
+.topbar .sub { font-size: 20px; color: var(--muted); }
+.topbar .grow { flex: 1; }
+.series { display: flex; align-items: center; gap: 18px; }
+.series .team { display: flex; align-items: center; gap: 12px; font-size: 26px; }
+.series .score { font-size: 40px; padding: 0 10px; }
+.tlogo { width: 64px; height: 64px; object-fit: contain; }
+.tlogo-text { display: grid; place-items: center; border-radius: calc(var(--radius) * .6); background: var(--tc); color: #fff; font-family: var(--font-head); font-weight: 800; font-size: 18px; text-shadow: 0 1px 2px rgba(0,0,0,.4); }
+
+.title-xl { font-size: 64px; line-height: 1; }
+.title-l { font-size: 40px; line-height: 1.05; }
+.pill { display: inline-block; padding: 6px 14px; border-radius: 999px; background: var(--accent); color: var(--accent-text); font-family: var(--font-head); font-weight: 700; font-size: 18px; text-transform: var(--head-case); letter-spacing: var(--head-spacing); }
+.winner-tag { background: var(--win); color: #1a1300; }
+
+.rad { --side: var(--radiant); }
+.dir { --side: var(--dire); }
+.side-bar { border-left: 6px solid var(--side); }
+
+.fade-in { animation: fade .5s ease both; }
+@keyframes fade { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.hidden { display: none !important; }
