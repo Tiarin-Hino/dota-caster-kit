@@ -253,9 +253,10 @@ async function renderSceneMap() {
   el.querySelectorAll("[data-sc]").forEach(i => i.onchange = () => save({ scenes: { [i.dataset.sc]: i.dataset.sc === "postDelay" ? +i.value : i.value } }, true));
 }
 
-const PAGES = [["postgame", "Post-game screens", "scoreboard, MVP, player, head to head, net worth, leaders"], ["between", "Between games", "up next + highlight reel"], ["replay", "Replay", "plays the clip you pick"], ["draft", "AD draft board", "Ability Draft only, needs AD+"]];
+const PAGES = [["postgame", "Post-game screens", "scoreboard, MVP, standout, head to head, net worth, leaders"], ["between", "Between games", "up next + highlight reel"], ["replay", "Replay", "plays the clip you pick"], ["draft", "Draft", ""]];
 function renderUrls() {
-  const html = PAGES.filter(p => p[0] !== "draft" || st.mode === "ad").map(([f, l, d]) => urlRow(l, d, `${ORIGIN}/overlays/${f}.html`)).join("");
+  const draftDesc = st.mode === "ad" ? "Ability Draft board – needs AD+" : st.draftLayout === "cam" ? "picks & bans bar + camera space – put cameras below this source" : "picks, bans & timer – full screen";
+  const html = PAGES.map(([f, l, d]) => urlRow(l, f === "draft" ? draftDesc : d, `${ORIGIN}/overlays/${f}.html`)).join("");
   if ($("#urls").dataset.k !== html) { $("#urls").dataset.k = html; $("#urls").innerHTML = html; bindCopy($("#urls")); }
   const acts = [["capture", "Capture replay"], ["show?last=10", "Replay last 10 s"], ["show?last=20", "Replay last 20 s"], ["show?last=30", "Replay last 30 s"], ["show?last=full", "Replay whole clip"],
     ["slower", "Slower"], ["normal", "Normal speed"], ["faster", "Faster"], ["live", "Back to live"], ["postgame?screen=board", "Post-game: scoreboard"], ["postgame?screen=mvp", "Post-game: MVP"],
