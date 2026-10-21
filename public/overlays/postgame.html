@@ -33,7 +33,7 @@
 /* --- spotlight (MVP / player) --- */
 .spot { flex: 1; display: grid; grid-template-columns: 760px 1fr; gap: 40px; align-items: stretch; }
 .spot .art { position: relative; overflow: hidden; }
-.spot .art img.render { position: absolute; left: 50%; bottom: 0; height: 104%; transform: translateX(-50%); filter: drop-shadow(0 20px 40px rgba(0,0,0,.6)); }
+.spot .art .render { position: absolute; left: 50%; bottom: 0; height: 104%; transform: translateX(-50%); filter: drop-shadow(0 20px 40px rgba(0,0,0,.6)); }
 .spot .art img.flat { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .35; filter: blur(6px); }
 .spot .info { display: flex; flex-direction: column; gap: 22px; padding: 40px 44px; }
 .spot .who { font-size: 88px; line-height: .95; }
@@ -45,6 +45,8 @@
 .spot .items img, .spot .items .noimg { width: 88px; height: 64px; border-radius: 6px; }
 .spot .items .neutral { width: 64px; height: 64px; }
 .spot .abil img, .spot .abil .noimg { width: 76px; height: 76px; border-radius: 10px; }
+.standout-tag { background: var(--accent-2); color: #fff; }
+body.static .fade-in { animation: none; }
 .label-s { font-size: 18px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 8px; }
 
 /* --- compare --- */
@@ -93,10 +95,11 @@ let st = null, match = null, lastKey = "", leaders = null;
 KIT.on("state", async s => {
   st = s;
   const d = s.display, screen = KIT.qs.get("screen") || d.screen;
-  const key = JSON.stringify([screen, d.rev, d.matchId, s.mode, s.match.teamA, s.match.teamB, s.match.score, KIT.assets, s.tournament, s.teams]);
+  const key = JSON.stringify([screen, d.rev, d.animated, d.matchId, s.mode, s.match.teamA, s.match.teamB, s.match.score, KIT.assets, s.tournament, s.teams]);
   if (key === lastKey) return; lastKey = key;
   if (screen === "off") { document.body.style.opacity = 0; return; }
   document.body.style.opacity = 1;
+  document.body.classList.toggle("static", !d.animated);
   match = await KIT.get(`/api/match?id=${encodeURIComponent(d.matchId || "latest")}`);
   if (screen === "leaders") leaders = await KIT.get("/api/leaders");
   render(screen);
@@ -107,6 +110,10 @@ const teamOf = side => { const saved = match && match.teams && match.teams[side]
   return t || { name: side === "radiant" ? "Radiant" : "Dire" }; };
 const pkey = p => p.team[0] + p.slot;
 const findP = key => match.players.find(p => pkey(p) === key || String(p.accountId) === String(key));
+// drafted abilities only for Ability Draft games (the mode the game was played in, else the current mode)
+const isAD = () => (match && match.mode ? match.mode : st.mode) === "ad" && match.players.some(p => p.drafted && p.drafted.some(Boolean));
+// standout default: best player of the losing team
+const standoutAuto = () => [...match.players].filter(p => p.team !== match.winTeam).sort((a, b) => (b.mvpScore || 0) - (a.mvpScore || 0))[0];
 const mvpPlayer = () => (st.display.mvp && findP(st.display.mvp)) || match.players.find(p => p.name === match.mvp) || [...match.players].sort((a, b) => (b.mvpScore || 0) - (a.mvpScore || 0))[0];
 
 function topbar(subtitle) {
@@ -122,11 +129,11 @@ function topbar(subtitle) {
   </div>`;
 }
 const itemsHtml = p => `<div class="items">${p.items.map(i => i ? img(item(i)) : `<span class="noimg"></span>`).join("")}${p.neutral ? img(item(p.neutral), "neutral") : ""}</div>`;
-const abilHtml = p => st.mode !== "ad" ? "" : `<div class="abil">${(p.drafted || [null, null, null, null]).map(a => a ? `<img src="${ability(a.name)}" title="${esc(a.displayName)}" onerror="this.outerHTML='<span class=noimg></span>'">` : `<span class="noimg"></span>`).join("")}</div>`;
+const abilHtml = p => !isAD() ? "" : `<div class="abil">${(p.drafted || [null, null, null, null]).map(a => a ? `<img src="${ability(a.name)}" title="${esc(a.displayName)}" onerror="this.outerHTML='<span class=noimg></span>'">` : `<span class="noimg"></span>`).join("")}</div>`;
 
 function render(screen) {
   if (!match || !match.players) { root.innerHTML = topbarSafe() + `<div class="empty head">Waiting for the first game to finish…</div>`; return; }
-  const fn = { board, mvp: () => spotlight(mvpPlayer(), "MVP"), player: () => spotlight(findP(st.display.player) || mvpPlayer(), "Player spotlight"),
+  const fn = { board, mvp: () => spotlight(mvpPlayer(), "MVP"), player: () => spotlight(findP(st.display.standout) || standoutAuto(), "Standout"),
                compare, graph, leaders: leadersScreen }[screen] || board;
   root.innerHTML = fn();
 }
@@ -134,13 +141,13 @@ function topbarSafe() { try { return topbar(""); } catch { return ""; } }
 
 function board() {
   const mvp = mvpPlayer();
-  document.documentElement.style.setProperty("--adcol", st.mode === "ad" ? "190px" : "0px");
+  document.documentElement.style.setProperty("--adcol", isAD() ? "190px" : "0px");
   const team = side => {
     const t = teamOf(side), ps = match.players.filter(p => p.team === side);
     const kills = ps.reduce((a, p) => a + (p.kills || 0), 0);
     return `<div class="tbl panel side-bar ${side === "radiant" ? "rad" : "dir"} ${match.winTeam === side ? "won" : ""} fade-in">
       <div class="th">${teamLogo(t)}<span class="n head">${esc(t.name)}</span><span class="pill winner-tag">Victory</span><span class="grow"></span><span class="muted">${side}</span><span class="k head num">${kills}</span></div>
-      <div class="hdr"><span></span><span>Player</span><span style="text-align:center">Lvl</span><span style="text-align:center">K / D / A</span><span style="text-align:center">LH / DN</span><span style="text-align:center">Net</span><span style="text-align:center">GPM / XPM</span><span style="text-align:center">Dmg</span><span>Items</span>${st.mode === "ad" ? "<span>Drafted</span>" : ""}</div>
+      <div class="hdr"><span></span><span>Player</span><span style="text-align:center">Lvl</span><span style="text-align:center">K / D / A</span><span style="text-align:center">LH / DN</span><span style="text-align:center">Net</span><span style="text-align:center">GPM / XPM</span><span style="text-align:center">Dmg</span><span>Items</span>${isAD() ? "<span>Drafted</span>" : ""}</div>
       ${ps.map(p => `<div class="row">${img(hero(p.hero), "portrait")}
         <div><div class="pn">${esc(p.name || "?")}${p === mvp ? `<span class="mvp-star">★ MVP</span>` : ""}</div><div class="hn">${esc(p.heroName)}</div></div>
         <div class="c num">${p.level ?? "–"}</div><div class="c num">${p.kills ?? 0} / ${p.deaths ?? 0} / ${p.assists ?? 0}</div>
@@ -156,14 +163,16 @@ function spotlight(p, label) {
   const t = teamOf(p.team);
   const tiles = [["K / D / A", `${p.kills ?? 0}/${p.deaths ?? 0}/${p.assists ?? 0}`], ["Net worth", k(p.netWorth)], ["GPM / XPM", `${p.gpm ?? "–"}/${p.xpm ?? "–"}`],
     ["Hero damage", k(p.heroDamage)], ["Last hits", num(p.lastHits)], p.heroHealing > 500 ? ["Healing", k(p.heroHealing)] : p.wardsPlaced ? ["Wards placed", p.wardsPlaced] : ["Tower damage", k(p.towerDamage)]];
-  return topbar(label) + `<div class="spot fade-in">
-    <div class="art panel ${p.team === "radiant" ? "rad" : "dir"} side-bar">${img(hero(p.hero), "flat")}<img class="render" src="${heroRender(p.hero)}" onerror="this.src='${hero(p.hero)}';this.style.height='auto';this.style.width='100%';this.style.bottom='30%'"></div>
+  return topbar(label) + `<div class="spot ${st.display.animated ? "fade-in" : ""}">
+    <div class="art panel ${p.team === "radiant" ? "rad" : "dir"} side-bar">${img(hero(p.hero), "flat")}${st.display.animated
+      ? `<video class="render" src="${heroRender(p.hero).replace(/\.png$/, ".webm")}" poster="${heroRender(p.hero)}" autoplay loop muted playsinline></video>`
+      : `<img class="render" src="${heroRender(p.hero)}" onerror="this.src='${hero(p.hero)}';this.style.height='auto';this.style.width='100%';this.style.bottom='30%'">`}</div>
     <div class="info panel">
-      <div><span class="pill ${label === "MVP" ? "winner-tag" : ""}">${esc(label)}</span></div>
+      <div><span class="pill ${label === "MVP" ? "winner-tag" : "standout-tag"}">${esc(label)}</span></div>
       <div><div class="who head">${esc(p.name || "?")}</div><div class="heroline">${esc(p.heroName)} · ${esc(t.name)}</div></div>
       <div class="tiles">${tiles.map(([l, v]) => `<div class="tile"><div class="l">${l}</div><div class="v head num">${v}</div></div>`).join("")}</div>
       <div><div class="label-s">Items</div>${itemsHtml(p)}</div>
-      ${st.mode === "ad" ? `<div><div class="label-s">Drafted abilities</div>${abilHtml(p)}</div>` : ""}
+      ${isAD() ? `<div><div class="label-s">Drafted abilities</div>${abilHtml(p)}</div>` : ""}
     </div></div>`;
 }
 

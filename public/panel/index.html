@@ -49,14 +49,17 @@
   <div class="card">
     <h2>Post-game screen <span class="hint" id="matchLine"></span></h2>
     <div class="seg" id="screens">
-      <button data-screen="board">Scoreboard</button><button data-screen="mvp">MVP</button><button data-screen="player">Player</button>
+      <button data-screen="board">Scoreboard</button><button data-screen="mvp">MVP</button><button data-screen="player">Standout</button>
       <button data-screen="compare">Head to head</button><button data-screen="graph">Net worth</button><button data-screen="leaders">Leaders</button><button data-screen="off">Hide</button>
     </div>
-    <div class="row3">
-      <label>Player / left<select id="pl1"></select></label>
-      <label>Right (head to head)<select id="pl2"></select></label>
+    <div class="row4">
       <label>MVP<select id="mvpSel"></select></label>
+      <label>Standout<select id="standSel"></select></label>
+      <label>Head to head – left<select id="pl1"></select></label>
+      <label>Head to head – right<select id="pl2"></select></label>
     </div>
+    <label class="switch"><input type="checkbox" id="animated"><span></span>Animated MVP / Standout (moving hero, fade-in)</label>
+    <p class="hint">Pick players first, then show the screen – changing a selection doesn't switch screens.</p>
   </div>
   <div class="card">
     <h2>Preview <span class="seg small right" id="pvSel"><button data-pv="postgame" class="on">Post-game</button><button data-pv="between">Between</button><button data-pv="replay">Replay</button><button data-pv="draft" class="adonly">AD draft</button></span></h2>
@@ -109,7 +112,15 @@
 <!-- ============================================================= DESIGN -->
 <section data-tab="design">
   <header><h1>Design</h1></header>
-  <div class="card"><h2>Theme</h2><div class="themes" id="themes"></div></div>
+  <div class="card"><h2>Theme</h2><div class="themes" id="themes"></div>
+    <div class="newtheme"><input id="newThemeName" placeholder="Name for your own theme, e.g. My League"><button class="primary" id="newTheme">Make my own theme from the selected one</button></div>
+    <p class="hint">Your themes are kept in <code>data/themes/</code> – updates never overwrite them. Advanced: copy any folder from <code>themes/</code> there by hand and restart.</p>
+  </div>
+  <div class="card ownonly" id="ownTheme"><h2><span>Edit <span id="ownName"></span></span> <button class="small ghost danger right" id="delTheme">Delete theme</button></h2>
+    <div class="row3"><label>Name<input id="ownTitle"></label><label style="grid-column: span 2">Description<input id="ownDesc"></label></div>
+    <label>Extra CSS (theme.css) – see docs/THEMES.md for classes and variables<textarea id="ownCss" spellcheck="false"></textarea></label>
+    <div class="btns"><button class="primary" id="saveOwn">Save theme</button><button class="ghost" id="bakeVars">Save current colours into the theme</button></div>
+  </div>
   <div class="grid two">
     <div class="card">
       <h2><span>Images for <span id="thName"></span></span></h2>
@@ -132,6 +143,11 @@
       <div class="seg" id="modeSeg"><button data-mode="ap">All Pick / CM / Turbo …</button><button data-mode="ad">Ability Draft</button></div>
       <p class="hint" id="modeHint"></p>
       <div class="adonly"><label>AD+ address<input id="adUrl"></label></div>
+      <div class="noad"><h3>Draft screen</h3>
+        <div class="seg" id="layoutSeg"><button data-layout="full">Own screen</button><button data-layout="cam">Bar + camera space</button></div>
+        <p class="hint" id="layoutHint"></p>
+        <div class="camonly"><label>Camera frames<select id="camFrames"><option value="0">none (transparent)</option><option value="1">1 large</option><option value="2">2 side by side</option></select></label></div>
+      </div>
     </li>
     <li class="card" id="st-gsi"><h2><b>2</b>Connect Dota 2 <span class="dot" id="gsiDot"></span></h2>
       <p>Dota sends live game data to this app through <i>Game State Integration</i>. It needs one small config file in your Dota folder.</p>

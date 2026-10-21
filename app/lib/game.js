@@ -94,7 +94,8 @@ class Recorder {
     st.connected = true; st.updated = Date.now();
     st.clock = map.clock_time ?? null; st.radiantScore = map.radiant_score ?? null; st.direScore = map.dire_score ?? null;
     st.spectating = !!(j.player && (j.player.team2 || j.player.team3));
-    if (j.player && (j.player.team2 || j.player.team3)) this.seen = parsePlayers(j);   // names/heroes in any phase (draft board)
+    if (j.player && (j.player.team2 || j.player.team3)) this.seen = parsePlayers(j);
+    if (j.draft && typeof j.draft === "object") this.draft = parseDraft(j.draft, gs);   // names/heroes in any phase (draft board)
     const inGame = /GAME_IN_PROGRESS|PRE_GAME|POST_GAME/.test(gs || "");
     if (inGame) {
       const players = parsePlayers(j);
@@ -200,6 +201,21 @@ class Recorder {
   }
 }
 
+// Captains Mode / hero draft from GSI "draft" block (spectating). Keys look like team2.pick0_class / ban0_class.
+function parseDraft(d, gs) {
+  const team = t => {
+    const o = { picks: [], bans: [], bonusTime: num(t && t.bonus_time) };
+    for (const [k, v] of Object.entries(t || {})) {
+      const m = /^(pick|ban)(\d+)_class$/.exec(k); if (!m || !v || v === "") continue;
+      const hero = String(v).replace("npc_dota_hero_", "");
+      o[m[1] === "pick" ? "picks" : "bans"][+m[2]] = { hero, heroName: heroName(hero) };
+    }
+    return o;
+  };
+  return { active: d.activeteam === 2 ? "radiant" : d.activeteam === 3 ? "dire" : null, isPick: !!d.pick,
+           timeLeft: num(d.activeteam_time_remaining), radiant: team(d.team2), dire: team(d.team3), state: gs, at: Date.now() };
+}
+
 function phaseOf(gs) {
   if (/HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE/.test(gs)) return "draft";
   if (/WAIT_FOR_MAP|PRE_GAME|GAME_IN_PROGRESS/.test(gs)) return "game";
@@ -210,4 +226,4 @@ function phaseOf(gs) {
 function readJson(f) { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch { return null; } }
 function writeJson(f, o) { fs.writeFileSync(f + ".tmp", JSON.stringify(o, null, 1)); fs.renameSync(f + ".tmp", f); }
 
-module.exports = { Recorder, parsePlayers, rankMvp, phaseOf, readJson, writeJson };
+module.exports = { Recorder, parsePlayers, parseDraft, rankMvp, phaseOf, readJson, writeJson };

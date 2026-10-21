@@ -39,18 +39,61 @@ function checkSize(spec, dim) {
   return null;
 }
 
+// Built-in themes live in themes/ (part of the app, replaced on update). Your own themes live in data/themes/
+// (created from the panel or copied there by hand) and are never touched by updates.
 class Themes {
-  constructor({ root, dataDir }) { this.root = root; this.up = path.join(dataDir, "uploads"); fs.mkdirSync(this.up, { recursive: true }); }
-  list() {
-    return fs.readdirSync(this.root).filter(d => fs.existsSync(path.join(this.root, d, "theme.json")))
-      .map(id => ({ id, ...this.meta(id) })).sort((a, b) => (a.order || 99) - (b.order || 99));
+  constructor({ root, dataDir }) {
+    this.root = root; this.custom = path.join(dataDir, "themes"); this.up = path.join(dataDir, "uploads");
+    fs.mkdirSync(this.up, { recursive: true }); fs.mkdirSync(this.custom, { recursive: true });
   }
-  meta(id) { try { return JSON.parse(fs.readFileSync(path.join(this.root, id, "theme.json"), "utf8")); } catch { return null; } }
+  dir(id) {
+    if (!/^[\w-]+$/.test(id || "")) return null;
+    if (fs.existsSync(path.join(this.custom, id, "theme.json"))) return path.join(this.custom, id);
+    if (fs.existsSync(path.join(this.root, id, "theme.json"))) return path.join(this.root, id);
+    return null;
+  }
+  urlBase(id) { return this.dir(id) && this.dir(id).startsWith(this.custom) ? `/custom-themes/${id}` : `/themes/${id}`; }
+  list() {
+    const ids = new Set();
+    for (const r of [this.root, this.custom]) for (const d of fs.readdirSync(r)) if (fs.existsSync(path.join(r, d, "theme.json"))) ids.add(d);
+    return [...ids].map(id => ({ id, custom: this.dir(id).startsWith(this.custom), ...this.meta(id) })).sort((a, b) => (a.custom - b.custom) || (a.order || 99) - (b.order || 99));
+  }
+  meta(id) { const d = this.dir(id); try { return JSON.parse(fs.readFileSync(path.join(d, "theme.json"), "utf8")); } catch { return null; } }
+  cssText(id) { const d = this.dir(id); try { return fs.readFileSync(path.join(d, "theme.css"), "utf8"); } catch { return ""; } }
+  // new theme = copy of another (its colours + your current colour overrides, its CSS and images)
+  create(name, from, vars = {}) {
+    const base = this.meta(from) || this.meta("esports");
+    let id = String(name || "my-theme").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "my-theme", n = 2;
+    while (this.dir(id)) id = id.replace(/-\d+$/, "") + "-" + n++;
+    const d = path.join(this.custom, id); fs.mkdirSync(d, { recursive: true });
+    const src = this.dir(from);
+    const assets = {};
+    for (const [slot, f] of Object.entries(base.assets || {})) { try { fs.copyFileSync(path.join(src, f), path.join(d, f)); assets[slot] = f; } catch {} }
+    fs.writeFileSync(path.join(d, "theme.json"), JSON.stringify({ ...base, name: name || id, description: `Based on ${base.name}`, author: "", order: 50,
+      vars: { ...(base.vars || {}), ...vars }, assets }, null, 2));
+    fs.writeFileSync(path.join(d, "theme.css"), `/* ${name} – your own rules. Based on ${base.name}. See docs/THEMES.md */\n` + this.cssText(from).replace(/^\/\*[^]*?\*\/\n?/, ""));
+    for (const ext of ["png", "jpg", "jpeg", "webp"]) for (const slot of Object.keys(SLOTS)) {
+      const f = path.join(this.up, from, `${slot}.${ext}`); if (fs.existsSync(f)) { fs.mkdirSync(path.join(this.up, id), { recursive: true }); fs.copyFileSync(f, path.join(this.up, id, `${slot}.${ext}`)); }
+    }
+    return id;
+  }
+  update(id, { name, description, vars, css }) {
+    const d = this.dir(id); if (!d || !d.startsWith(this.custom)) return { error: "only your own themes can be edited – make a copy first" };
+    const m = this.meta(id);
+    if (name) m.name = name; if (description !== undefined) m.description = description; if (vars) m.vars = { ...(m.vars || {}), ...vars };
+    fs.writeFileSync(path.join(d, "theme.json"), JSON.stringify(m, null, 2));
+    if (css !== undefined) fs.writeFileSync(path.join(d, "theme.css"), css);
+    return { ok: true };
+  }
+  remove(id) {
+    const d = this.dir(id); if (!d || !d.startsWith(this.custom)) return { error: "built-in themes can't be deleted" };
+    fs.rmSync(d, { recursive: true, force: true }); fs.rmSync(path.join(this.up, id), { recursive: true, force: true }); return { ok: true };
+  }
   // url of an image slot: upload > theme file > none
   asset(id, slot) {
     for (const ext of ["png", "jpg", "jpeg", "webp"]) if (fs.existsSync(path.join(this.up, id, `${slot}.${ext}`))) return `/uploads/${id}/${slot}.${ext}`;
     const m = this.meta(id) || {}; const f = m.assets && m.assets[slot];
-    return f ? `/themes/${id}/${f}` : null;
+    return f ? `${this.urlBase(id)}/${f}` : null;
   }
   css(id, overrides = {}) {
     const m = this.meta(id) || this.meta("esports") || {};
@@ -61,8 +104,8 @@ class Themes {
     for (const [k, v] of Object.entries(vars)) lines.push(`  --${k}: ${v};`);
     for (const slot of Object.keys(SLOTS)) { const u = this.asset(id, slot); lines.push(`  --img-${slot}: ${u ? `url("${u}")` : "none"};`); }
     lines.push("}");
-    const extra = path.join(this.root, id, "theme.css");
-    if (fs.existsSync(extra)) lines.push(fs.readFileSync(extra, "utf8"));
+    const extra = this.cssText(this.meta(id) ? id : "esports");
+    if (extra) lines.push(extra);
     return lines.join("\n");
   }
   saveUpload(id, slot, buf) {

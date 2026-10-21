@@ -45,7 +45,9 @@ const DEFAULTS = {
   streamlabs: { port: 59650, token: "" },
   scenes: { auto: true, draft: "Draft", game: "Game", postgame: "Postgame", replay: "Replay", between: "Between Games", postDelay: 5 },
   autoCapture: true,
-  autoResult: true,                             // add the finished game to the series score automatically
+  autoResult: true,
+  draftLayout: "full",                          // hero draft screen: "full" (own screen) | "cam" (bottom bar, space for cameras/video)
+  camFrames: 2,                                 // "cam" layout: 0, 1 or 2 framed camera spots                             // add the finished game to the series score automatically
   adplusUrl: "http://127.0.0.1:58873",
 };
 const SETTINGS_FILE = path.join(DATA, "settings.json");
@@ -66,7 +68,8 @@ function pushState() { broadcast("state", publicState()); }
 // ------------------------------------------------------------------ components
 const themes = new Themes({ root: path.join(ROOT, "themes"), dataDir: DATA });
 const adplus = new AdPlus({ url: settings.adplusUrl, log });
-const display = { screen: "off", player: null, player2: null, mvp: null, rev: 0 };      // post-game overlay
+// post-game overlay: player = head-to-head left, player2 = right, standout = standout screen, mvp = MVP override
+const display = { screen: "off", player: null, player2: null, standout: null, mvp: null, animated: true, rev: 0 };
 const replay = { clipId: null, fromEnd: null, speed: 1, playing: false, rev: 0, start: 0 };   // start++ = (re)start playback        // replay overlay
 let ready = null;               // newest captured clip id (what "show last N s" plays)
 let pendingHl = null;           // highlight waiting for its replay file
@@ -108,6 +111,7 @@ function publicState() {
     gsi: { ...recorder.state, fresh: recorder.state.updated && Date.now() - recorder.state.updated < 30000 },
     adplus: { enabled: settings.mode === "ad", connected: adplus.connected },
     app: { kind: settings.app, ...(connector ? connector.status() : { connected: false, error: null }) },
+    draftLayout: settings.draftLayout, camFrames: settings.camFrames,
     scenes: settings.scenes, autoCapture: settings.autoCapture, autoResult: settings.autoResult, replayFolder: settings.replays.folder,
   };
 }
@@ -161,8 +165,16 @@ const ACTIONS = {
   slower: async () => setSpeed(-1), faster: async () => setSpeed(1), normal: async () => setSpeed(0),
   live: async () => { replay.playing = false; replay.rev++; pushState(); await switchScene(settings.scenes.game); return "back to live"; },
   auto: async () => { settings.scenes.auto = !settings.scenes.auto; saveSettings(); pushState(); return "auto scenes " + (settings.scenes.auto ? "on" : "off"); },
-  postgame: async (q) => { setDisplay({ screen: q.screen || "board", player: q.player || null, player2: q.player2 || null, mvp: q.mvp === undefined ? display.mvp : q.mvp || null });
-                           if (q.screen !== "off") await switchScene(settings.scenes.postgame); return "post-game → " + (q.screen || "board"); },
+  // ?keep=1 only updates the selections (players, MVP, animation) without changing the screen or the scene
+  postgame: async (q) => {
+    const sel = {};
+    for (const k of ["player", "player2", "standout", "mvp"]) if (q[k] !== undefined) sel[k] = q[k] || null;
+    if (q.animated !== undefined) sel.animated = q.animated === "1" || q.animated === "true";
+    if (q.keep) { setDisplay(sel); return "post-game selection updated"; }
+    setDisplay({ ...sel, screen: q.screen || "board" });
+    if (q.screen !== "off") await switchScene(settings.scenes.postgame);
+    return "post-game → " + (q.screen || "board");
+  },
   scene: async (q) => { const n = settings.scenes[q.name] || q.name; if (!connector) throw new Error("no streaming app connected"); await switchScene(n); return "scene " + n; },
   between: async () => { await switchScene(settings.scenes.between); return "between games"; },
   archive: async () => { const s = sides(); const r = replays.archive(`${teamInfo(s.radiant)?.name || ""} vs ${teamInfo(s.dire)?.name || ""}`); pushState(); return `archived ${r.moved} clip(s)`; },
@@ -208,6 +220,7 @@ function gsiCfg() {
     "abilities"   "1"
     "items"       "1"
     "allplayers"  "1"
+    "draft"       "1"
   }
 }
 `;
@@ -274,6 +287,12 @@ const server = http.createServer(async (req, res) => {
       return json(res, m || null);
     }
     if (p === "/api/matches") return json(res, recorder.listMatches().map(m => ({ matchId: m.matchId, endedAt: m.endedAt, winTeam: m.winTeam, teams: m.teams, mvp: m.mvp })));
+    if (p === "/api/draft" && settings.mode !== "ad") {     // hero draft (Captains Mode / All Pick) from Dota GSI
+      const s = sides(), d = recorder.draft;
+      return json(res, { mode: "hero", gsi: recorder.state.updated ? Date.now() - recorder.state.updated < 30000 : false, draft: d,
+        players: (recorder.seen || []).map(p => ({ team: p.team, slot: p.slot, name: p.name, hero: p.hero, heroName: p.heroName })),
+        teams: { radiant: teamInfo(s.radiant), dire: teamInfo(s.dire) } });
+    }
     if (p === "/api/draft") {         // AD mode: AD+ picks, names from GSI when AD+ has none
       const rows = ((adplus.picks || {}).players || []).map((r, i) => ({ index: i, team: i < 5 ? "radiant" : "dire", name: r.playerName || null,
         hero: (/heroes\/([a-z0-9_]+)\./i.exec(r.portraitPath || "") || [])[1] || null,
@@ -348,6 +367,23 @@ const server = http.createServer(async (req, res) => {
     if (p === "/api/upload" && req.method === "DELETE") { themes.removeUpload(q.theme || settings.theme, q.slot); bumpTheme(); pushState(); return json(res, { ok: true }); }
     if (p.startsWith("/uploads/")) return serveFile(res, path.join(DATA, "uploads"), p.slice(9));
     if (p.startsWith("/themes/")) return serveFile(res, path.join(ROOT, "themes"), p.slice(8));
+    if (p.startsWith("/custom-themes/")) return serveFile(res, path.join(DATA, "themes"), p.slice(15));
+    // --- own themes
+    if (p === "/api/theme" && req.method === "GET") return json(res, { meta: themes.meta(q.id), css: themes.cssText(q.id), custom: (themes.list().find(t => t.id === q.id) || {}).custom });
+    if (p === "/api/theme/new" && req.method === "POST") {
+      const b = JSON.parse(String(await body(req)) || "{}");
+      const id = themes.create(b.name, b.from || settings.theme, b.from === settings.theme || !b.from ? settings.themeVars : {});
+      settings.theme = id; settings.themeVars = {}; saveSettings(); bumpTheme(); pushState(); log("theme created: " + id);
+      return json(res, { ok: true, id, themes: themes.list() });
+    }
+    if (p === "/api/theme" && req.method === "POST") {
+      const b = JSON.parse(String(await body(req)) || "{}"); const r = themes.update(b.id, b);
+      if (r.ok) { bumpTheme(); pushState(); } return json(res, { ...r, themes: themes.list() }, r.ok ? 200 : 400);
+    }
+    if (p === "/api/theme" && req.method === "DELETE") {
+      const r = themes.remove(q.id); if (r.ok && settings.theme === q.id) { settings.theme = "esports"; settings.themeVars = {}; saveSettings(); }
+      if (r.ok) { bumpTheme(); pushState(); } return json(res, { ...r, themes: themes.list() }, r.ok ? 200 : 400);
+    }
     if (p === "/api/assets") return json(res, assetsOf(q.theme || settings.theme));
     if (p === "/api/heroname") return json(res, { name: heroName(q.npc) });
     // --- pages

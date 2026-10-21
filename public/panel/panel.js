@@ -12,7 +12,9 @@ async function act(name, q = "") {
   toast(r.ok ? r.message : r.error, !r.ok); return r;
 }
 async function save(patch, quiet) {
-  const r = await post("/api/settings", patch); if (r.ok) { cfg.settings = r.settings; if (!quiet) toast("Saved"); } else toast(r.error || "Could not save", true);
+  const r = await post("/api/settings", patch);
+  if (r.ok) { cfg.settings = r.settings; if (st) { st.mode = r.settings.mode; st.theme = r.settings.theme; } render(); if (!quiet) toast("Saved"); }
+  else toast(r.error || "Could not save", true);
 }
 const debounce = (fn, ms = 500) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
@@ -80,21 +82,26 @@ function renderLive() {
   $("#ready").innerHTML = r ? `Latest clip: <b>${esc(r.label || r.file)}</b> · ${new Date(r.at).toLocaleTimeString()}${r.playable ? "" : ` · <span style="color:var(--warn)">MKV – set MP4</span>`}${st.replay.playing ? " · <b style='color:var(--acc)'>playing " + st.replay.speed + "×</b>" : ""}`
     : st.replayFolder ? "No clip yet – press Capture (or your app's Save Replay hotkey)" : `Replay folder not set – see <a onclick="showTab('setup')">Setup step 4</a>`;
   $$("#screens button").forEach(b => b.classList.toggle("on", b.dataset.screen === st.display.screen));
+  $("#animated").checked = st.display.animated !== false;
   loadMatch();
 }
 async function loadMatch() {
+  if ($("#screens").parentElement.contains(document.activeElement) && document.activeElement.tagName === "SELECT") return;
   const key = st.gsi.matchId + "|" + st.display.rev + "|" + (st.gsi.gameState || "");
   if (loadMatch.key === key) return; loadMatch.key = key;
   match = await api("/api/match?id=latest");
   const ps = (match && match.players) || [];
   const opt = (sel, val, first) => `${first ? `<option value="">${first}</option>` : ""}${ps.map(p => `<option value="${p.team[0] + p.slot}" ${val === p.team[0] + p.slot ? "selected" : ""}>${esc(p.name || "?")} – ${esc(p.heroName)} (${p.team})</option>`).join("")}`;
-  $("#pl1").innerHTML = opt("pl1", st.display.player, "auto"); $("#pl2").innerHTML = opt("pl2", st.display.player2, "auto");
+  $("#pl1").innerHTML = opt("pl1", st.display.player, "auto (top Radiant)"); $("#pl2").innerHTML = opt("pl2", st.display.player2, "auto (top Dire)");
+  $("#standSel").innerHTML = opt("stand", st.display.standout, "auto (best of the losing team)");
   $("#mvpSel").innerHTML = opt("mvp", st.display.mvp, `auto${match && match.mvp ? " (" + esc(match.mvp) + ")" : ""}`);
   $("#matchLine").textContent = match ? `latest game: ${match.matchId || "?"} · ${match.winTeam || "?"} won · ${new Date(match.endedAt).toLocaleTimeString()}` : "no finished game yet – try tools/fake-gsi.js";
 }
 $$("#screens button").forEach(b => b.onclick = () => showScreen(b.dataset.screen));
-function showScreen(screen) { act("postgame", new URLSearchParams({ screen: screen || st.display.screen, player: $("#pl1").value, player2: $("#pl2").value, mvp: $("#mvpSel").value })); }
-["#pl1", "#pl2", "#mvpSel"].forEach(s => $(s).onchange = () => showScreen(st.display.screen === "off" ? "board" : st.display.screen));
+const selection = () => ({ player: $("#pl1").value, player2: $("#pl2").value, standout: $("#standSel").value, mvp: $("#mvpSel").value, animated: $("#animated").checked ? "1" : "0" });
+function showScreen(screen) { act("postgame", new URLSearchParams({ ...selection(), screen })); }
+// changing a selection only stores it – the screen changes when you click a screen button
+["#pl1", "#pl2", "#mvpSel", "#standSel", "#animated"].forEach(s => $(s).onchange = () => api("/api/action/postgame?" + new URLSearchParams({ ...selection(), keep: 1 })));
 $$("[data-act]").forEach(b => b.onclick = () => act(b.dataset.act, b.dataset.q || ""));
 $("#autoScenes").onchange = e => save({ scenes: { auto: e.target.checked } }, true);
 $("#autoCapture").onchange = e => save({ autoCapture: e.target.checked }, true);
@@ -167,12 +174,14 @@ function renderDesign() {
   if ($("#themes").dataset.k !== themes.map(t => t.id).join()) {
     $("#themes").dataset.k = themes.map(t => t.id).join();
     $("#themes").innerHTML = themes.map(t => `<div class="theme" data-id="${t.id}"><div class="pv"><iframe loading="lazy" src="/overlays/between.html?theme=${t.id}&reel=0"></iframe></div>
-      <div class="m"><b>${esc(t.name)}</b><span>${esc(t.description || "")}</span></div></div>`).join("");
+      <div class="m"><b>${esc(t.name)}${t.custom ? `<span class="own">YOURS</span>` : ""}</b><span>${esc(t.description || "")}</span></div></div>`).join("");
     $$(".theme").forEach(el => el.onclick = () => save({ theme: el.dataset.id, themeVars: {} }).then(() => toast("Theme: " + el.querySelector("b").textContent)));
     setTimeout(fitPreviews, 50);
   }
   $$(".theme").forEach(el => el.classList.toggle("on", el.dataset.id === cur));
   const meta = themes.find(t => t.id === cur) || {};
+  $("#ownTheme").classList.toggle("on", !!meta.custom);
+  if (meta.custom && $("#ownTheme").dataset.id !== cur) loadOwn(cur);
   $("#thName").textContent = meta.name || cur;
   $("#slots").innerHTML = Object.entries(cfg.slots).map(([k, s]) => `<div class="slot"><div class="img" style="${st.assets[k] ? `background-image:url('${st.assets[k]}')` : ""}"></div>
     <div><b>${esc(s.label)}</b><span>${s.max ? "max " : ""}${s.w}×${s.h} px · ${esc(s.hint)}</span></div>
@@ -197,9 +206,14 @@ async function upload(slot, file) {
 function renderSetup() {
   const s = cfg.settings;
   $$("#modeSeg button").forEach(b => b.classList.toggle("on", b.dataset.mode === s.mode));
+  $$("#layoutSeg button").forEach(b => b.classList.toggle("on", b.dataset.layout === s.draftLayout));
+  $(".camonly").classList.toggle("on", s.draftLayout === "cam"); $("#camFrames").value = String(s.camFrames);
+  $("#layoutHint").innerHTML = s.draftLayout === "cam"
+    ? "Picks and bans in a bar at the bottom; the rest is transparent. Put your camera or video source <b>below</b> the draft browser source in the scene and size it into the frame."
+    : "A full draft screen in your theme – team names, picks, bans and the timer. Works without any cameras.";
   $("#modeHint").innerHTML = s.mode === "ad"
     ? `Ability Draft needs <a href="https://github.com/Tiarin-Hino/ability-draft-plus" target="_blank">Ability Draft Plus (AD+)</a> running on this PC – it reads the drafted abilities, which Dota's own data mixes up while spectating. Adds the <b>AD draft</b> overlay and drafted abilities on the post-game screens.`
-    : "Works for every mode with a normal hero draft. Pick Ability Draft only for AD tournaments.";
+    : "All Pick, Captains Mode, Turbo… Hero picks and bans come from Dota while you spectate the draft (bans: Captains Mode).";
   if (document.activeElement !== $("#adUrl")) $("#adUrl").value = s.adplusUrl;
   $$("#appSeg button").forEach(b => b.classList.toggle("on", b.dataset.app === (setupApp || s.app)));
   $$(".appcfg").forEach(d => d.classList.toggle("on", d.dataset.for === (setupApp || s.app)));
@@ -212,6 +226,8 @@ function renderSetup() {
 }
 let setupApp = null;
 $$("#modeSeg button").forEach(b => b.onclick = () => save({ mode: b.dataset.mode }));
+$$("#layoutSeg button").forEach(b => b.onclick = () => save({ draftLayout: b.dataset.layout }, true));
+$("#camFrames").onchange = e => save({ camFrames: +e.target.value }, true);
 $("#adUrl").onchange = e => save({ adplusUrl: e.target.value.trim() });
 $$("#appSeg button").forEach(b => b.onclick = () => { setupApp = b.dataset.app; renderSetup(); if (setupApp === "none") { save({ app: "none" }); setupApp = null; } });
 $$("#st-app input, #rFolder").forEach(i => i.oninput = () => i.dataset.dirty = 1);
@@ -258,3 +274,29 @@ async function loadLog() { $("#log").textContent = (await api("/api/log")).join(
   connect();
   setInterval(async () => { const c = await api("/api/settings").catch(() => null); if (c) { cfg = c; } }, 10000);
 })();
+
+// ------------------------------------------------------------------ own themes
+async function loadOwn(id) {
+  const t = await api("/api/theme?id=" + encodeURIComponent(id));
+  $("#ownTheme").dataset.id = id; $("#ownName").textContent = t.meta.name;
+  $("#ownTitle").value = t.meta.name || ""; $("#ownDesc").value = t.meta.description || ""; $("#ownCss").value = t.css || "";
+}
+async function refreshThemes(r) { if (r.themes) { cfg.themes = r.themes; $("#themes").dataset.k = ""; } cfg = await api("/api/settings"); render(); }
+$("#newTheme").onclick = async () => {
+  const name = $("#newThemeName").value.trim(); if (!name) return toast("Give your theme a name first", true);
+  const r = await post("/api/theme/new", { name, from: st.theme });
+  if (r.ok) { $("#newThemeName").value = ""; $("#ownTheme").dataset.id = ""; toast("Theme created – it's now active"); await refreshThemes(r); } else toast(r.error, true);
+};
+$("#saveOwn").onclick = async () => {
+  const r = await post("/api/theme", { id: st.theme, name: $("#ownTitle").value.trim(), description: $("#ownDesc").value, css: $("#ownCss").value });
+  toast(r.ok ? "Theme saved" : r.error, !r.ok); if (r.ok) { $("#ownName").textContent = $("#ownTitle").value; await refreshThemes(r); }
+};
+$("#bakeVars").onclick = async () => {
+  const r = await post("/api/theme", { id: st.theme, vars: cfg.settings.themeVars });
+  if (r.ok) { await save({ themeVars: {} }, true); toast("Colours saved into the theme"); await refreshThemes(r); } else toast(r.error, true);
+};
+$("#delTheme").onclick = async () => {
+  if ($("#delTheme").dataset.armed !== "1") { $("#delTheme").dataset.armed = "1"; $("#delTheme").textContent = "Click again to delete"; setTimeout(() => { $("#delTheme").dataset.armed = ""; $("#delTheme").textContent = "Delete theme"; }, 3000); return; }
+  const r = await api("/api/theme?id=" + encodeURIComponent(st.theme), { method: "DELETE" });
+  toast(r.ok ? "Theme deleted" : r.error, !r.ok); if (r.ok) { $("#ownTheme").dataset.id = ""; await refreshThemes(r); }
+};

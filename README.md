@@ -10,12 +10,13 @@ Grew out of the stream tools of *Rumble in the Jungle*, a community Ability Draf
 
 | | |
 |---|---|
-| **Post-game screens** | Scoreboard (K/D/A, net worth, GPM/XPM, damage, items), MVP spotlight, player spotlight, head-to-head, net-worth graph, tournament leaders. One click each. |
+| **Post-game screens** | Scoreboard (K/D/A, net worth, GPM/XPM, damage, items), MVP, standout player, head-to-head, net-worth graph, tournament leaders. Animated or static. Pick players first, show with one click. |
+| **Draft screen** | Captains Mode / All Pick: picks, bans and timer live from Dota – as a full screen in your theme, or as a bottom bar that leaves room for caster cameras or a studio video. Ability Draft: live drafted abilities. |
 | **Instant replays** | Save your replay buffer, then play the last 10 / 20 / 30 s or the whole clip at 0.25×–2× speed. Goes back to the game when it ends. |
 | **Highlight reel** | Multi-kills and teamfights are detected from the game data and captured automatically. The between-games screen loops them next to *Up next*. When the next draft starts, the clips are filed into `Highlights/<date> <teams>/`. |
 | **Series tracking** | Teams, logos, Bo1/2/3/5, score counted automatically from the winning side. |
 | **Auto scenes** | Draft → game → post-game switch on their own (OBS / Streamlabs connection). Never cuts a replay. |
-| **Themes** | 4 built-in themes. Upload your background, logo and texture (sizes are checked), override colours – or write your own theme with plain CSS. |
+| **Themes** | 4 built-in themes. Upload your background, logo and texture (sizes are checked), override colours – or make your own theme in the panel (copy one, edit its CSS). |
 | **Stream Deck ready** | Every button is also a URL – Stream Deck, Bitfocus Companion, Touch Portal, AutoHotkey. |
 | **All Pick or Ability Draft** | AD mode adds a live draft board and drafted abilities on every screen (needs [Ability Draft Plus](https://github.com/Tiarin-Hino/ability-draft-plus)). |
 
@@ -43,7 +44,7 @@ Add each as a **Browser Source, 1920 × 1080**, in its own scene:
 | Post-game | `http://127.0.0.1:58900/overlays/postgame.html` | after the game; the panel picks the screen |
 | Between games | `http://127.0.0.1:58900/overlays/between.html` | *Up next* + highlight reel (`?sound=1` for clip audio, `?reel=0` without reel) |
 | Replay | `http://127.0.0.1:58900/overlays/replay.html` | plays the clip you pick (`?sound=1` for audio) |
-| AD draft | `http://127.0.0.1:58900/overlays/draft.html` | Ability Draft only |
+| Draft | `http://127.0.0.1:58900/overlays/draft.html` | hero draft (CM/AP) or the AD board. `?layout=cam` = bottom bar + camera space (put cameras **below** this source), `?cams=0/1/2` frames |
 
 Any page takes `?theme=<id>` to preview another theme.
 

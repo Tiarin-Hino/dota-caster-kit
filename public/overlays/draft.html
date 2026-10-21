@@ -1,9 +1,10 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><title>AD draft – Dota Caster Kit</title>
+<html><head><meta charset="utf-8"><title>Draft – Dota Caster Kit</title>
 <link rel="stylesheet" href="/shared/base.css">
 <style>
 .stage { padding: 48px 64px; gap: 26px; }
 .topbar .logo { height: 80px; }
+/* ---------- Ability Draft board ---------- */
 .side { display: flex; flex-direction: column; gap: 14px; flex: 1; min-height: 0; }
 .side .sh { display: flex; align-items: center; gap: 16px; font-size: 30px; }
 .side .sh .tlogo { width: 52px; height: 52px; }
@@ -22,27 +23,78 @@
 .card .ab .s.ult:not(.on)::after { content: "ULT"; font-size: 13px; color: var(--win); letter-spacing: .1em; }
 @keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
 .wait { position: absolute; left: 0; right: 0; bottom: 30px; text-align: center; color: var(--muted); font-size: 22px; }
+
+/* ---------- Hero draft (Captains Mode / All Pick) ---------- */
+.hd { position: absolute; inset: 0; }
+.hd .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 400px; display: grid; grid-template-columns: 1fr 300px 1fr; gap: 0; border-radius: 0; }
+.hd.full .bar { left: 64px; right: 64px; bottom: 48px; border-radius: var(--radius); }
+.hd .team { display: flex; flex-direction: column; padding: 18px 26px 22px; gap: 14px; min-width: 0; }
+.hd .team.dir { align-items: flex-end; }
+.hd .tn { display: flex; align-items: center; gap: 14px; font-size: 34px; }
+.hd .team.dir .tn { flex-direction: row-reverse; }
+.hd .tn .tlogo { width: 56px; height: 56px; }
+.hd .picks { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 100%; }
+.hd .pk { height: 190px; position: relative; overflow: hidden; border-radius: calc(var(--radius) * .6); background: var(--panel-2); border: 2px solid transparent; }
+.hd .pk img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 15%; animation: pop .35s ease; }
+.hd .pk .pn { position: absolute; left: 0; right: 0; bottom: 0; padding: 22px 8px 6px; font-size: 17px; text-align: center; background: linear-gradient(transparent, rgba(0,0,0,.85)); color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hd .pk.next { border-color: var(--side); box-shadow: 0 0 20px var(--side); }
+.hd .bans { display: flex; gap: 6px; }
+.hd .team.dir .bans { flex-direction: row-reverse; }
+.hd .bn { width: 72px; height: 41px; border-radius: 4px; overflow: hidden; background: var(--panel-2); position: relative; }
+.hd .bn img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) brightness(.6); }
+.hd .bn img + i { position: absolute; left: -10%; right: -10%; top: 50%; height: 3px; background: var(--dire); transform: rotate(-24deg); }
+.hd .bn.next { outline: 2px solid var(--side); }
+.hd .mid { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border-left: var(--border); border-right: var(--border); }
+.hd .mid .logo { max-height: 70px; max-width: 240px; object-fit: contain; }
+.hd .mid .phase { font-size: 22px; color: var(--muted); }
+.hd .mid .who { font-size: 26px; color: var(--side, var(--text)); }
+.hd .mid .clock { font-size: 84px; line-height: 1; }
+.hd .mid .bonus { font-size: 18px; color: var(--muted); }
+.hd .mid .score { font-size: 24px; }
+.hd .top { position: absolute; left: 64px; right: 64px; top: 48px; }
+.hd .cams { position: absolute; left: 64px; right: 64px; top: 60px; bottom: 440px; display: flex; gap: 40px; justify-content: center; align-items: center; }
+.hd .cam { aspect-ratio: 16 / 9; height: 100%; max-width: calc(50% - 20px); border: 3px solid var(--line); border-radius: var(--radius); position: relative; box-shadow: var(--shadow); }
+.hd .cams.one .cam { max-width: 100%; }
+.hd .cam span { position: absolute; left: 16px; top: -18px; padding: 4px 14px; background: var(--accent); color: var(--accent-text); font-size: 18px; border-radius: 4px; }
+.hd.full .vs { position: absolute; left: 64px; right: 64px; top: 210px; bottom: 470px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 40px; }
+.hd.full .vs .t { display: flex; flex-direction: column; align-items: center; gap: 18px; font-size: 52px; text-align: center; }
+.hd.full .vs .t .tlogo { width: 180px; height: 180px; font-size: 40px; }
+.hd.full .vs .x { font-size: 48px; color: var(--muted); }
 </style></head>
 <body>
-<div class="backdrop"></div>
+<div class="backdrop" id="bd"></div>
 <div class="stage" id="root"></div>
-<div class="wait hidden" id="wait">Waiting for Ability Draft Plus… (AD mode needs the AD+ app running)</div>
+<div class="wait hidden" id="wait"></div>
 <script src="/shared/kit.js"></script>
 <script>
-// Ability Draft board – drafted abilities per player, live from Ability Draft Plus (AD+).
+// Draft screen.
+//  Ability Draft mode: drafted abilities per player, live from Ability Draft Plus (AD+).
+//  Other modes: hero picks & bans from Dota (spectating). Two layouts (panel → Setup, or ?layout=):
+//    full – own screen in the theme's style, works without cameras
+//    cam  – picks/bans bar at the bottom, the top is transparent: put your camera / video sources UNDER this source
+//           (?cams=0|1|2 framed spots, labels with ?cam1=Casters&cam2=Studio)
 const { esc, img, hero, ability, teamLogo } = KIT;
-const root = document.getElementById("root");
-let last = "";
+const root = document.getElementById("root"), qs = KIT.qs;
+let last = "", cur = null;
 async function tick() {
   if (!KIT.state) return;
   let d; try { d = await KIT.get("/api/draft"); } catch { return; }
-  document.getElementById("wait").classList.toggle("hidden", d.connected && d.players.length);
-  const st = KIT.state, key = JSON.stringify([d, st.match, KIT.assets, st.tournament]);
+  cur = d;
+  const st = KIT.state, key = JSON.stringify([d.draft ? { ...d.draft, timeLeft: 0, at: 0, radiant: { ...d.draft.radiant, bonusTime: 0 }, dire: { ...d.draft.dire, bonusTime: 0 } } : null, d.players, d.connected, d.teams, st.match, KIT.assets, st.tournament, st.draftLayout, st.camFrames]);
   if (key === last) return; last = key;
+  d.mode === "hero" ? heroDraft(d, st) : adBoard(d, st);
+}
+
+// ------------------------------------------------------------ Ability Draft
+function adBoard(d, st) {
+  document.getElementById("bd").classList.remove("hidden");
+  const w = document.getElementById("wait"); w.textContent = "Waiting for Ability Draft Plus… (AD mode needs the AD+ app running)";
+  w.classList.toggle("hidden", d.connected && d.players.length);
   const players = d.players.length ? d.players : Array.from({ length: 10 }, (_, i) => ({ index: i, team: i < 5 ? "radiant" : "dire", picks: [] }));
   const side = s => { const t = d.teams[s] || { name: s === "radiant" ? "Radiant" : "Dire" };
     return `<div class="side ${s === "radiant" ? "rad" : "dir"}"><div class="sh head">${teamLogo(t)}<span>${esc(t.name)}</span><span class="muted" style="font-size:20px">${s}</span></div>
       <div class="cards">${players.filter(p => p.team === s).map(card).join("")}</div></div>`; };
+  root.className = "stage";
   root.innerHTML = `<div class="topbar panel">${KIT.logo()}<div><div class="tname head">${esc(st.tournament.name)}</div><div class="sub">${esc([st.match.round, "Ability Draft"].filter(Boolean).join(" · "))}</div></div></div>${side("radiant")}${side("dire")}`;
 }
 function card(p) {
@@ -51,6 +103,48 @@ function card(p) {
     <div class="nm">${esc(p.name || "Player " + (p.index + 1))}</div><div class="hn">${esc(p.heroName || "")}</div>
     <div class="ab">${picks.map((a, i) => `<div class="s ${a ? "on" : ""} ${i === 3 ? "ult" : ""}" title="${esc(a && a.displayName)}">${a ? `<img src="${ability(a.name)}" alt="" onerror="this.remove()">` : ""}</div>`).join("")}</div></div>`;
 }
+
+// ------------------------------------------------------------ Hero draft (CM / AP)
+const BANS = +(qs.get("bans") || 7);
+function heroDraft(d, st) {
+  const layout = qs.get("layout") || st.draftLayout || "full", cams = +(qs.get("cams") ?? st.camFrames ?? 2);
+  document.getElementById("bd").classList.toggle("hidden", layout === "cam");
+  const w = document.getElementById("wait"); w.textContent = "Waiting for the draft… (spectate the lobby in Dota)"; w.classList.toggle("hidden", !!d.draft || layout === "cam");
+  const dr = d.draft || { radiant: { picks: [], bans: [] }, dire: { picks: [], bans: [] } };
+  const nameOf = h => (d.players.find(p => p.hero === h) || {}).name;
+  const team = s => d.teams[s] || { name: s === "radiant" ? "Radiant" : "Dire" };
+  // next slot of the active team glows
+  const nextIdx = (s, kind) => dr.active === s && (kind === "picks") === dr.isPick ? (dr[s][kind] || []).filter(Boolean).length : -1;
+  const col = s => {
+    const t = dr[s], np = nextIdx(s, "picks"), nb = nextIdx(s, "bans");
+    return `<div class="team ${s === "radiant" ? "rad" : "dir"}"><div class="tn head">${teamLogo(team(s))}<span>${esc(team(s).name)}</span></div>
+      <div class="picks">${[0, 1, 2, 3, 4].map(i => { const p = (t.picks || [])[i];
+        return `<div class="pk ${i === np ? "next" : ""}">${p ? `<img src="${hero(p.hero)}" alt="" onerror="this.remove()"><div class="pn">${esc(nameOf(p.hero) || p.heroName)}</div>` : ""}</div>`; }).join("")}</div>
+      <div class="bans">${Array.from({ length: BANS }, (_, i) => { const b = (t.bans || [])[i];
+        return `<div class="bn ${i === nb ? "next" : ""}">${b ? `<img src="${hero(b.hero)}" alt="" title="${esc(b.heroName)}"><i></i>` : ""}</div>`; }).join("")}</div></div>`;
+  };
+  const left = dr.timeLeft != null ? Math.max(0, Math.round(dr.timeLeft - (Date.now() - dr.at) / 1000)) : null;
+  const act = dr.active ? `<div class="who head ${dr.active === "radiant" ? "rad" : "dir"}" style="color:var(--side)">${esc(team(dr.active).name)}</div><div class="phase">${dr.isPick ? "picking" : "banning"}</div>` : `<div class="phase">${d.draft ? "draft" : "waiting"}</div>`;
+  const sc = st.match.score;
+  const mid = `<div class="mid">${KIT.logo()}${act}<div class="clock head num">${left == null ? "" : KIT.clock(left)}</div>
+    ${dr.radiant.bonusTime != null ? `<div class="bonus num">reserve ${KIT.clock(dr.radiant.bonusTime)} · ${KIT.clock(dr.dire.bonusTime)}</div>` : ""}
+    ${st.match.bo > 1 ? `<div class="score head num">${sc.a} – ${sc.b}</div>` : ""}</div>`;
+  const bar = `<div class="bar panel">${col("radiant")}${mid}${col("dire")}</div>`;
+  root.className = "hd " + layout;
+  if (layout === "cam") {
+    const labels = [qs.get("cam1") || "Casters", qs.get("cam2") || "Studio"];
+    root.innerHTML = `<div class="cams ${cams === 1 ? "one" : ""}">${Array.from({ length: cams }, (_, i) => `<div class="cam"><span class="head">${esc(labels[i])}</span></div>`).join("")}</div>${bar}`;
+  } else {
+    root.innerHTML = `<div class="top"><div class="topbar panel">${KIT.logo()}<div><div class="tname head">${esc(st.tournament.name)}</div><div class="sub">${esc([st.match.round, "Draft"].filter(Boolean).join(" · "))}</div></div></div></div>
+      <div class="vs"><div class="t rad head">${teamLogo(team("radiant"))}<span>${esc(team("radiant").name)}</span></div><div class="x head">vs</div><div class="t dir head">${teamLogo(team("dire"))}<span>${esc(team("dire").name)}</span></div></div>${bar}`;
+  }
+}
 setInterval(tick, 1000); KIT.on("state", tick);
+// countdown + reserve time update without re-rendering the cards
+setInterval(() => {
+  const dr = cur && cur.draft, c = document.querySelector(".hd .clock"), b = document.querySelector(".hd .bonus"); if (!dr || !c) return;
+  if (dr.timeLeft != null) c.textContent = KIT.clock(Math.max(0, Math.round(dr.timeLeft - (Date.now() - dr.at) / 1000)));
+  if (b && dr.radiant.bonusTime != null) b.textContent = `reserve ${KIT.clock(dr.radiant.bonusTime)} · ${KIT.clock(dr.dire.bonusTime)}`;
+}, 250);
 </script>
 </body></html>

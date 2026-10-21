@@ -17,6 +17,8 @@ Dota sends live data to the app through a config file:
 2. Steam → Dota 2 → Properties → Launch options: add `-gamestateintegration`.
 3. Restart Dota. Spectate a lobby or watch a replay – the Dota light in the panel turns green.
 
+The config also asks Dota for the **draft** (picks, bans, timer) – if you installed it from an older version of the kit, install it again and restart Dota.
+
 Dota only reports all 10 players while **spectating / casting / watching a replay**. While you play yourself, it reports only you.
 
 ## 3. Connect your streaming app (optional, recommended)
@@ -54,7 +56,7 @@ One **Browser Source** per scene, **1920 × 1080**:
 | Post-game | `http://127.0.0.1:58900/overlays/postgame.html` |
 | Replay | `http://127.0.0.1:58900/overlays/replay.html` |
 | Between games | `http://127.0.0.1:58900/overlays/between.html` |
-| Draft *(AD only)* | `http://127.0.0.1:58900/overlays/draft.html` |
+| Draft | `http://127.0.0.1:58900/overlays/draft.html` – choose *Own screen* or *Bar + camera space* in Setup step 1. With camera space: put your camera / studio video sources **below** the browser source and size them into the frames. |
 
 For clip sound add `?sound=1` and tick *Control audio via OBS*. Leave *Shutdown source when not visible* **off** so screens are ready the moment you switch.
 

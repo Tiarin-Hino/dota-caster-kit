@@ -20,9 +20,25 @@ const MATCH = String(7000000000 + Math.floor(Math.random() * 1e6));
 
 const players = HEROES.map((h, i) => ({ h, name: NAMES[i], team: i < 5 ? "team2" : "team3", slot: i, k: 0, d: 0, a: 0, nw: 600, lh: 0 }));
 
+// Captains Mode draft: 7 bans + 5 picks per team, revealed step by step during hero selection
+const BAN_POOL = ["invoker", "mars", "pangolier", "tinker", "morphling", "storm_spirit", "void_spirit", "ember_spirit", "earth_spirit", "spectre", "medusa", "terrorblade", "slark", "puck"];
+let draftStep = 0;
+function draft() {
+  const order = []; for (let i = 0; i < 24; i++) order.push(i < 4 || (i >= 8 && i < 14) || i >= 22 ? "ban" : "pick");
+  const t = { team2: {}, team3: {} }, n = { team2: { pick: 0, ban: 0 }, team3: { pick: 0, ban: 0 } };
+  for (let i = 0; i < Math.min(draftStep, 24); i++) {
+    const side = i % 2 ? "team3" : "team2", kind = order[i], k = n[side][kind]++;
+    const heroName = kind === "pick" ? HEROES[(side === "team2" ? 0 : 5) + k] : BAN_POOL[(side === "team2" ? 0 : 7) + k];
+    if (heroName) t[side][`${kind}${k}_class`] = heroName, t[side][`${kind}${k}_id`] = 1;
+  }
+  return { activeteam: draftStep % 2 ? 3 : 2, pick: order[Math.min(draftStep, 23)] === "pick", activeteam_time_remaining: 25 - (draftStep % 5) * 3,
+    radiant_bonus_time: 130 - draftStep * 2, dire_bonus_time: 130 - draftStep * 3, team2: { ...t.team2, home_team: true }, team3: t.team3 };
+}
+
 function state(gs, clock, win) {
   const j = { provider: { name: "Dota 2", appid: 570 }, map: { matchid: MATCH, game_state: gs, clock_time: clock, win_team: win || "none",
     radiant_score: players.slice(0, 5).reduce((a, p) => a + p.k, 0), dire_score: players.slice(5).reduce((a, p) => a + p.k, 0) },
+    draft: draft(),
     player: { team2: {}, team3: {} }, hero: { team2: {}, team3: {} }, items: { team2: {}, team3: {} }, abilities: { team2: {}, team3: {} } };
   for (const p of players) {
     const key = "player" + p.slot, m = Math.max(1, clock / 60);
@@ -41,7 +57,7 @@ function state(gs, clock, win) {
 
 (async () => {
   console.log(`fake match ${MATCH} → http://127.0.0.1:${PORT}/gsi`);
-  for (let t = 0; t < 10; t++) { await send(state(t < 6 ? "DOTA_GAMERULES_STATE_HERO_SELECTION" : "DOTA_GAMERULES_STATE_STRATEGY_TIME", -90)); await sleep(1000); }
+  for (let t = 0; t < 26; t++) { draftStep = t; await send(state(t < 24 ? "DOTA_GAMERULES_STATE_HERO_SELECTION" : "DOTA_GAMERULES_STATE_STRATEGY_TIME", -90)); await sleep(1000); }
   await send(state("DOTA_GAMERULES_STATE_PRE_GAME", -60)); await sleep(2000);
   let clock = 0;
   const tick = async (sec = 30) => { clock += sec; for (const p of players) { const lead = p.team === "team3" ? (clock < 1100 ? 1.25 : 0.85) : (clock < 1100 ? 0.9 : 1.2);

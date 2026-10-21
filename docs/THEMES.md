@@ -10,7 +10,11 @@ themes/
     background.jpg  optional – default images (users can still replace them in the panel)
 ```
 
-The app finds new theme folders on start. Restart it after adding one.
+Hand-made themes go into `data/themes/` (kept across updates) or `themes/` (built-in). The app finds new folders on start – restart it after adding one.
+
+## Your own theme in the panel
+
+Design tab → select the theme closest to what you want → type a name → **Make my own theme from the selected one**. The copy is saved in `data/themes/<name>/` (updates never touch it) and becomes active. Then edit its name, description and extra CSS right in the panel, upload images, and **Save current colours into the theme** to keep your colour picks inside it. Share it by zipping that folder.
 
 ## Quick rebrand without code
 
